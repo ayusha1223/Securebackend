@@ -7,6 +7,7 @@ const {
 } = require("../utils/generateToken");
 
 const generateVerificationToken = require("../utils/generateVerificationToken");
+const generateResetToken = require("../utils/generateResetToken");
 
 /* ===========================================
    REGISTER
@@ -124,9 +125,67 @@ const verifyEmail = async (token) => {
 
   return true;
 };
+/* ===========================================
+   FORGOT PASSWORD
+=========================================== */
+const forgotPassword = async (email) => {
+  const user = await User.findOne({
+    email: email.toLowerCase(),
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const resetToken = generateResetToken();
+
+  user.passwordResetToken = resetToken;
+  user.passwordResetExpires = new Date(
+    Date.now() + 15 * 60 * 1000
+  );
+
+  await user.save();
+
+  return {
+    resetToken,
+  };
+};
+
+/* ===========================================
+   RESET PASSWORD
+=========================================== */
+const resetPassword = async (token, newPassword) => {
+  const user = await User.findOne({
+    passwordResetToken: token,
+  });
+
+  if (!user) {
+    throw new Error("Invalid reset token");
+  }
+
+  if (
+    !user.passwordResetExpires ||
+    user.passwordResetExpires < Date.now()
+  ) {
+    throw new Error("Reset token has expired");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+  user.password = hashedPassword;
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+  user.lastPasswordChange = new Date();
+
+  await user.save();
+
+  return true;
+};
 
 module.exports = {
   registerUser,
   loginUser,
   verifyEmail,
+  forgotPassword,
+  resetPassword,
 };
