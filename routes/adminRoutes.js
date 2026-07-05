@@ -6,12 +6,20 @@ const protect = require("../middleware/auth");
 const admin = require("../middleware/admin");
 
 const {
+  dashboardStats,
   getUsers,
   lockUser,
   unlockUser,
   deleteUser,
   auditLogs,
 } = require("../controllers/AdminController");
+
+router.get(
+  "/dashboard",
+  protect,
+  admin,
+  dashboardStats
+);
 
 /* ===========================================
    Users

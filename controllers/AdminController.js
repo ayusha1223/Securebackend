@@ -1,5 +1,7 @@
 const User = require("../models/User");
 const { getAllLogs } = require("../services/auditService");
+const Vault = require("../models/Vault");
+const AuditLog = require("../models/AuditLog");
 
 /* ===========================================
    Get All Users
@@ -130,8 +132,53 @@ const auditLogs = async (req, res) => {
     });
   }
 };
+/* ===========================================
+   Dashboard Statistics
+=========================================== */
+const dashboardStats = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
 
+    const totalVaults = await Vault.countDocuments();
+
+    const totalAuditLogs =
+      await AuditLog.countDocuments();
+
+    const verifiedUsers =
+      await User.countDocuments({
+        isVerified: true,
+      });
+
+    const lockedUsers =
+      await User.countDocuments({
+        isActive: false,
+      });
+
+    const adminUsers =
+      await User.countDocuments({
+        role: "admin",
+      });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        totalVaults,
+        totalAuditLogs,
+        verifiedUsers,
+        lockedUsers,
+        adminUsers,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
+  dashboardStats,
   getUsers,
   lockUser,
   unlockUser,
