@@ -112,6 +112,66 @@ const deleteUser = async (req, res) => {
     });
   }
 };
+/* ===========================================
+   Admin Dashboard
+=========================================== */
+const adminDashboard = async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+
+    const totalVaults = await Vault.countDocuments();
+
+    const totalAuditLogs =
+      await AuditLog.countDocuments();
+
+    const adminUsers =
+      await User.countDocuments({
+        role: "admin",
+      });
+
+    const recentUsers = await User.find()
+      .select(
+        "firstName lastName email role createdAt"
+      )
+      .sort({
+        createdAt: -1,
+      })
+      .limit(5);
+
+    const recentLogs = await AuditLog.find()
+      .populate(
+        "user",
+        "firstName lastName"
+      )
+      .sort({
+        createdAt: -1,
+      })
+      .limit(5);
+
+    res.status(200).json({
+      success: true,
+
+      data: {
+        stats: {
+          totalUsers,
+          totalVaults,
+          totalAuditLogs,
+          adminUsers,
+        },
+
+        recentUsers,
+
+        recentLogs,
+      },
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 /* ===========================================
    Audit Logs
@@ -135,53 +195,90 @@ const auditLogs = async (req, res) => {
 /* ===========================================
    Dashboard Statistics
 =========================================== */
+/* ===========================================
+   Dashboard Statistics
+=========================================== */
 const dashboardStats = async (req, res) => {
   try {
+    const User = require("../models/User");
+    const Vault = require("../models/Vault");
+    const AuditLog = require("../models/AuditLog");
+
     const totalUsers = await User.countDocuments();
 
     const totalVaults = await Vault.countDocuments();
 
-    const totalAuditLogs =
-      await AuditLog.countDocuments();
+    const totalLogs = await AuditLog.countDocuments();
 
-    const verifiedUsers =
-      await User.countDocuments({
-        isVerified: true,
-      });
+    const admins = await User.countDocuments({
+      role: "admin",
+    });
 
-    const lockedUsers =
-      await User.countDocuments({
-        isActive: false,
-      });
+    const normalUsers = await User.countDocuments({
+      role: "user",
+    });
 
-    const adminUsers =
-      await User.countDocuments({
-        role: "admin",
-      });
+    const activeUsers = await User.countDocuments({
+      isActive: true,
+    });
 
-    res.status(200).json({
+    const lockedUsers = await User.countDocuments({
+      isActive: false,
+    });
+
+    const verifiedUsers = await User.countDocuments({
+      isVerified: true,
+    });
+
+    const unverifiedUsers = await User.countDocuments({
+      isVerified: false,
+    });
+
+    const categories = await Vault.aggregate([
+      {
+        $group: {
+          _id: "$category",
+          value: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
+    res.json({
       success: true,
+
       data: {
         totalUsers,
         totalVaults,
-        totalAuditLogs,
-        verifiedUsers,
+        totalLogs,
+
+        admins,
+        normalUsers,
+
+        activeUsers,
         lockedUsers,
-        adminUsers,
+
+        verifiedUsers,
+        unverifiedUsers,
+
+        categories,
       },
     });
-  } catch (error) {
+
+  } catch (err) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: err.message,
     });
   }
 };
 module.exports = {
-  dashboardStats,
   getUsers,
   lockUser,
   unlockUser,
   deleteUser,
   auditLogs,
+  dashboardStats,
+  adminDashboard,
 };

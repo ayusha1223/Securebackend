@@ -12,10 +12,11 @@ const {
   unlockUser,
   deleteUser,
   auditLogs,
+  adminDashboard,
 } = require("../controllers/AdminController");
 
 router.get(
-  "/dashboard",
+  "/statistics",
   protect,
   admin,
   dashboardStats
@@ -51,6 +52,12 @@ router.delete(
   protect,
   admin,
   deleteUser
+);
+router.get(
+  "/dashboard",
+  protect,
+  admin,
+  adminDashboard
 );
 
 /* ===========================================
