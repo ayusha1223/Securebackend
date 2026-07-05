@@ -37,6 +37,14 @@ const vaultSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    passwordExpiry: {
+  type: Date,
+  default: () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 90);
+    return date;
+  },
+},
 
     category: {
       type: String,

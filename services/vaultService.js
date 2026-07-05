@@ -5,6 +5,20 @@ const { encrypt, decrypt } = require("../utils/encrypt");
    Create Password
 ============================ */
 const createVault = async (userId, data) => {
+  const existingVaults = await Vault.find({
+  user: userId,
+});
+
+for (const vault of existingVaults) {
+  const existingPassword = decrypt(vault.password);
+
+  if (existingPassword === data.password) {
+    throw new Error(
+      "This password is already used in another account."
+    );
+  }
+}
+
   return await Vault.create({
     user: userId,
     websiteName: data.websiteName,
@@ -61,6 +75,35 @@ const updateVault = async (userId, vaultId, data) => {
     throw new Error("Password not found");
   }
 
+  // Prevent password reuse
+  if (data.password !== undefined) {
+    const allVaults = await Vault.find({
+      user: userId,
+      _id: { $ne: vaultId },
+    });
+
+    for (const item of allVaults) {
+      try {
+        const existingPassword = decrypt(item.password);
+
+        if (existingPassword === data.password) {
+          throw new Error(
+            "This password is already used in another account."
+          );
+        }
+      } catch (err) {
+        if (
+          err.message ===
+          "This password is already used in another account."
+        ) {
+          throw err;
+        }
+      }
+    }
+
+    vault.password = encrypt(data.password);
+  }
+
   if (data.websiteName !== undefined)
     vault.websiteName = data.websiteName;
 
@@ -72,9 +115,6 @@ const updateVault = async (userId, vaultId, data) => {
 
   if (data.email !== undefined)
     vault.email = data.email;
-
-  if (data.password !== undefined)
-    vault.password = encrypt(data.password);
 
   if (data.category !== undefined)
     vault.category = data.category;
