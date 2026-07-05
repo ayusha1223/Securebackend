@@ -4,11 +4,16 @@ const { body } = require("express-validator");
 const router = express.Router();
 
 const validate = require("../middleware/validate");
+const loginLimiter = require("../middleware/rateLimiter");
 
 const {
   register,
   login,
 } = require("../controllers/AuthController");
+
+const {
+  refreshToken,
+} = require("../controllers/TokenController");
 
 /* ===========================================
    Register
@@ -45,6 +50,7 @@ router.post(
 =========================================== */
 router.post(
   "/login",
+  loginLimiter,
   [
     body("email")
       .trim()
@@ -59,5 +65,10 @@ router.post(
   validate,
   login
 );
+
+/* ===========================================
+   Refresh Token
+=========================================== */
+router.post("/refresh-token", refreshToken);
 
 module.exports = router;

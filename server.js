@@ -6,20 +6,16 @@ const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
 
-// Load environment variables
 dotenv.config();
 
-// Connect Database
 connectDB();
 
 const app = express();
 
-
-// Secure HTTP headers
 app.use(helmet());
 
-// Allow frontend requests
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -27,17 +23,10 @@ app.use(
   })
 );
 
-// Parse JSON
 app.use(express.json());
-
-// Parse URL Encoded Data
 app.use(express.urlencoded({ extended: true }));
-
-// Parse Cookies
 app.use(cookieParser());
 
-
-// Health Check
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
@@ -45,8 +34,8 @@ app.get("/", (req, res) => {
   });
 });
 
-// Authentication Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
