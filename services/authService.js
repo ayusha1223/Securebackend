@@ -8,6 +8,7 @@ const {
 
 const generateVerificationToken = require("../utils/generateVerificationToken");
 const generateResetToken = require("../utils/generateResetToken");
+const { sendEmail } = require("./emailService");
 
 /* ===========================================
    REGISTER
@@ -36,12 +37,32 @@ const registerUser = async (userData) => {
     isVerified: false,
   });
 
+  const verifyLink = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: "Verify your SecureVault Account",
+    html: `
+      <h2>Welcome to SecureVault</h2>
+      <p>Please verify your email.</p>
+
+      <a href="${verifyLink}"
+         style="
+           background:#2563eb;
+           color:white;
+           padding:12px 20px;
+           border-radius:6px;
+           text-decoration:none;">
+         Verify Email
+      </a>
+    `,
+  });
+
   return {
     id: user._id,
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
-    verificationToken,
   };
 };
 
@@ -58,23 +79,28 @@ const loginUser = async (email, password) => {
   }
 
   if (!user.isVerified) {
-    throw new Error("Please verify your email before logging in.");
+    throw new Error("Please verify your email first.");
   }
 
   if (user.lockUntil && user.lockUntil > Date.now()) {
     throw new Error(
-      "Your account has been locked due to multiple failed login attempts."
+      "Account temporarily locked due to multiple failed login attempts."
     );
   }
 
-  const isMatch = await bcrypt.compare(password, user.password);
+  const isMatch = await bcrypt.compare(
+    password,
+    user.password
+  );
 
   if (!isMatch) {
     user.failedLoginAttempts++;
 
     if (user.failedLoginAttempts >= 5) {
-      user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
       user.failedLoginAttempts = 0;
+      user.lockUntil = new Date(
+        Date.now() + 15 * 60 * 1000
+      );
     }
 
     await user.save();
@@ -105,7 +131,6 @@ const loginUser = async (email, password) => {
     },
   };
 };
-
 /* ===========================================
    VERIFY EMAIL
 =========================================== */
@@ -125,6 +150,7 @@ const verifyEmail = async (token) => {
 
   return true;
 };
+
 /* ===========================================
    FORGOT PASSWORD
 =========================================== */
@@ -146,15 +172,36 @@ const forgotPassword = async (email) => {
 
   await user.save();
 
-  return {
-    resetToken,
-  };
+  const resetLink =
+    `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
+  await sendEmail({
+    to: user.email,
+    subject: "SecureVault Password Reset",
+    html: `
+      <h2>Password Reset</h2>
+
+      <p>Click below to reset your password.</p>
+
+      <a href="${resetLink}"
+         style="
+           background:#dc2626;
+           color:white;
+           padding:12px 20px;
+           border-radius:6px;
+           text-decoration:none;">
+         Reset Password
+      </a>
+    `,
+  });
+
+  return true;
 };
 
 /* ===========================================
    RESET PASSWORD
 =========================================== */
-const resetPassword = async (token, newPassword) => {
+const resetPassword = async (token, password) => {
   const user = await User.findOne({
     passwordResetToken: token,
   });
@@ -167,15 +214,103 @@ const resetPassword = async (token, newPassword) => {
     !user.passwordResetExpires ||
     user.passwordResetExpires < Date.now()
   ) {
-    throw new Error("Reset token has expired");
+    throw new Error("Reset token expired");
   }
 
-  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   user.password = hashedPassword;
   user.passwordResetToken = null;
   user.passwordResetExpires = null;
   user.lastPasswordChange = new Date();
+
+  await user.save();
+
+  return true;
+};
+/* ===========================================
+   ENABLE MFA
+=========================================== */
+const enableMFA = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  user.mfaEnabled = true;
+
+  await user.save();
+
+  return true;
+};
+
+/* ===========================================
+   SEND MFA OTP
+=========================================== */
+const sendMFA = async (userId) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const otp = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+  user.mfaCode = otp;
+  user.mfaExpires = new Date(Date.now() + 5 * 60 * 1000);
+
+  await user.save();
+
+  await sendEmail({
+    to: user.email,
+    subject: "SecureVault Login OTP",
+    html: `
+      <h2>SecureVault OTP</h2>
+
+      <p>Your verification code is:</p>
+
+      <h1 style="letter-spacing:6px;">
+        ${otp}
+      </h1>
+
+      <p>This code expires in 5 minutes.</p>
+    `,
+  });
+
+  return true;
+};
+
+/* ===========================================
+   VERIFY MFA OTP
+=========================================== */
+const verifyMFA = async (userId, otp) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  if (!user.mfaEnabled) {
+    throw new Error("MFA is not enabled.");
+  }
+
+  if (
+    !user.mfaCode ||
+    !user.mfaExpires ||
+    user.mfaExpires < Date.now()
+  ) {
+    throw new Error("OTP expired");
+  }
+
+  if (user.mfaCode !== otp) {
+    throw new Error("Invalid OTP");
+  }
+
+  user.mfaCode = null;
+  user.mfaExpires = null;
 
   await user.save();
 
@@ -188,4 +323,7 @@ module.exports = {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  enableMFA,
+  sendMFA,
+  verifyMFA,
 };

@@ -62,7 +62,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Account Lock
+    // Account Lockout
     failedLoginAttempts: {
       type: Number,
       default: 0,
@@ -73,7 +73,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // MFA
+    // Multi-Factor Authentication
     mfaEnabled: {
       type: Boolean,
       default: false,
@@ -89,7 +89,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
-    // Refresh Token
+    // JWT Refresh Token
     refreshToken: {
       type: String,
       default: null,

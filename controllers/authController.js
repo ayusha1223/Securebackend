@@ -4,10 +4,13 @@ const {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  enableMFA,
+  sendMFA,
+  verifyMFA,
 } = require("../services/authService");
 
 /* ===========================================
-   REGISTER
+   Register
 =========================================== */
 const register = async (req, res) => {
   try {
@@ -15,7 +18,7 @@ const register = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Registration successful. Please verify your email.",
+      message: "Registration successful. Verification email sent.",
       data: user,
     });
   } catch (error) {
@@ -27,20 +30,18 @@ const register = async (req, res) => {
 };
 
 /* ===========================================
-   LOGIN
+   Login
 =========================================== */
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const data = await loginUser(email, password);
+    const result = await loginUser(email, password);
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      user: data.user,
+      ...result,
     });
   } catch (error) {
     res.status(401).json({
@@ -51,7 +52,7 @@ const login = async (req, res) => {
 };
 
 /* ===========================================
-   VERIFY EMAIL
+   Verify Email
 =========================================== */
 const verifyUserEmail = async (req, res) => {
   try {
@@ -70,18 +71,15 @@ const verifyUserEmail = async (req, res) => {
 };
 
 /* ===========================================
-   FORGOT PASSWORD
+   Forgot Password
 =========================================== */
 const forgotUserPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-
-    const result = await forgotPassword(email);
+    await forgotPassword(req.body.email);
 
     res.status(200).json({
       success: true,
-      message: "Password reset token generated.",
-      data: result,
+      message: "Password reset email sent.",
     });
   } catch (error) {
     res.status(400).json({
@@ -92,17 +90,75 @@ const forgotUserPassword = async (req, res) => {
 };
 
 /* ===========================================
-   RESET PASSWORD
+   Reset Password
 =========================================== */
 const resetUserPassword = async (req, res) => {
   try {
-    const { password } = req.body;
-
-    await resetPassword(req.params.token, password);
+    await resetPassword(
+      req.params.token,
+      req.body.password
+    );
 
     res.status(200).json({
       success: true,
       message: "Password reset successfully.",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* ===========================================
+   Enable MFA
+=========================================== */
+const enableUserMFA = async (req, res) => {
+  try {
+    await enableMFA(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: "MFA enabled.",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* ===========================================
+   Send MFA OTP
+=========================================== */
+const sendUserMFA = async (req, res) => {
+  try {
+    await sendMFA(req.user._id);
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent successfully.",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* ===========================================
+   Verify MFA OTP
+=========================================== */
+const verifyUserMFA = async (req, res) => {
+  try {
+    await verifyMFA(req.user._id, req.body.otp);
+
+    res.status(200).json({
+      success: true,
+      message: "OTP verified successfully.",
     });
   } catch (error) {
     res.status(400).json({
@@ -118,4 +174,7 @@ module.exports = {
   verifyUserEmail,
   forgotUserPassword,
   resetUserPassword,
+  enableUserMFA,
+  sendUserMFA,
+  verifyUserMFA,
 };
