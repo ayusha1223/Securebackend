@@ -103,6 +103,10 @@ const updateVault = async (userId, vaultId, data) => {
 
     vault.password = encrypt(data.password);
   }
+  const expiry = new Date();
+expiry.setDate(expiry.getDate() + 90);
+
+vault.passwordExpiry = expiry;
 
   if (data.websiteName !== undefined)
     vault.websiteName = data.websiteName;
