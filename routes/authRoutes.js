@@ -9,66 +9,42 @@ const loginLimiter = require("../middleware/rateLimiter");
 const {
   register,
   login,
+  verifyUserEmail,
 } = require("../controllers/AuthController");
 
 const {
   refreshToken,
 } = require("../controllers/TokenController");
 
-/* ===========================================
-   Register
-=========================================== */
+/* Register */
 router.post(
   "/register",
   [
-    body("firstName")
-      .trim()
-      .notEmpty()
-      .withMessage("First name is required"),
-
-    body("lastName")
-      .trim()
-      .notEmpty()
-      .withMessage("Last name is required"),
-
-    body("email")
-      .trim()
-      .isEmail()
-      .withMessage("Valid email is required")
-      .normalizeEmail(),
-
-    body("password")
-      .isLength({ min: 8 })
-      .withMessage("Password must be at least 8 characters"),
+    body("firstName").trim().notEmpty(),
+    body("lastName").trim().notEmpty(),
+    body("email").isEmail().normalizeEmail(),
+    body("password").isLength({ min: 8 }),
   ],
   validate,
   register
 );
 
-/* ===========================================
-   Login
-=========================================== */
+/* Login */
 router.post(
   "/login",
   loginLimiter,
   [
-    body("email")
-      .trim()
-      .isEmail()
-      .withMessage("Valid email is required")
-      .normalizeEmail(),
-
-    body("password")
-      .notEmpty()
-      .withMessage("Password is required"),
+    body("email").isEmail().normalizeEmail(),
+    body("password").notEmpty(),
   ],
   validate,
   login
 );
 
-/* ===========================================
-   Refresh Token
-=========================================== */
+/* Refresh Token */
 router.post("/refresh-token", refreshToken);
+
+/* Verify Email */
+router.get("/verify-email/:token", verifyUserEmail);
 
 module.exports = router;

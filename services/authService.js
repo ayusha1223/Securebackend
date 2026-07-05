@@ -1,10 +1,16 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
+
 const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../utils/generateToken");
 
+const generateVerificationToken = require("../utils/generateVerificationToken");
+
+/* ===========================================
+   REGISTER
+=========================================== */
 const registerUser = async (userData) => {
   const { firstName, lastName, email, password } = userData;
 
@@ -18,11 +24,15 @@ const registerUser = async (userData) => {
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
+  const verificationToken = generateVerificationToken();
+
   const user = await User.create({
     firstName,
     lastName,
     email: email.toLowerCase(),
     password: hashedPassword,
+    verificationToken,
+    isVerified: false,
   });
 
   return {
@@ -30,9 +40,13 @@ const registerUser = async (userData) => {
     firstName: user.firstName,
     lastName: user.lastName,
     email: user.email,
+    verificationToken,
   };
 };
 
+/* ===========================================
+   LOGIN
+=========================================== */
 const loginUser = async (email, password) => {
   const user = await User.findOne({
     email: email.toLowerCase(),
@@ -40,6 +54,10 @@ const loginUser = async (email, password) => {
 
   if (!user) {
     throw new Error("Invalid email or password");
+  }
+
+  if (!user.isVerified) {
+    throw new Error("Please verify your email before logging in.");
   }
 
   if (user.lockUntil && user.lockUntil > Date.now()) {
@@ -87,7 +105,28 @@ const loginUser = async (email, password) => {
   };
 };
 
+/* ===========================================
+   VERIFY EMAIL
+=========================================== */
+const verifyEmail = async (token) => {
+  const user = await User.findOne({
+    verificationToken: token,
+  });
+
+  if (!user) {
+    throw new Error("Invalid verification token");
+  }
+
+  user.isVerified = true;
+  user.verificationToken = null;
+
+  await user.save();
+
+  return true;
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  verifyEmail,
 };
