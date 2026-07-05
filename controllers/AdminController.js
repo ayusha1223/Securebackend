@@ -2,6 +2,7 @@ const User = require("../models/User");
 const { getAllLogs } = require("../services/auditService");
 const Vault = require("../models/Vault");
 const AuditLog = require("../models/AuditLog");
+const SystemSettings = require("../models/SystemSettings");
 
 /* ===========================================
    Get All Users
@@ -273,6 +274,57 @@ const dashboardStats = async (req, res) => {
     });
   }
 };
+/* ===========================================
+   Get System Settings
+=========================================== */
+const getSystemSettings = async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+
+    res.status(200).json({
+      success: true,
+      data: settings,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/* ===========================================
+   Update System Settings
+=========================================== */
+const updateSystemSettings = async (req, res) => {
+  try {
+    let settings = await SystemSettings.findOne();
+
+    if (!settings) {
+      settings = await SystemSettings.create(req.body);
+    } else {
+      Object.assign(settings, req.body);
+      await settings.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "System settings updated.",
+      data: settings,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   getUsers,
   lockUser,
@@ -281,4 +333,6 @@ module.exports = {
   auditLogs,
   dashboardStats,
   adminDashboard,
+  getSystemSettings,
+  updateSystemSettings,
 };

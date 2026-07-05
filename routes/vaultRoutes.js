@@ -14,6 +14,7 @@ const {
   getCategoryPasswords,
   getFavourites,
   favouritePassword,
+  getPasswordHealth,
 } = require("../controllers/VaultController");
 
 /* ===========================================
@@ -29,11 +30,22 @@ router.get("/", protect, getPasswords);
 // Search Passwords
 router.get("/search", protect, searchPasswords);
 
-// Get Favourite Passwords
+// Favourite Passwords
 router.get("/favourites", protect, getFavourites);
 
-// Get Passwords by Category
-router.get("/category/:category", protect, getCategoryPasswords);
+// Passwords by Category
+router.get(
+  "/category/:category",
+  protect,
+  getCategoryPasswords
+);
+
+// Password Health Dashboard
+router.get(
+  "/health",
+  protect,
+  getPasswordHealth
+);
 
 // Get Single Password
 router.get("/:id", protect, getPassword);
@@ -45,6 +57,10 @@ router.put("/:id", protect, editPassword);
 router.delete("/:id", protect, removePassword);
 
 // Toggle Favourite
-router.patch("/:id/favourite", protect, favouritePassword);
+router.patch(
+  "/:id/favourite",
+  protect,
+  favouritePassword
+);
 
 module.exports = router;

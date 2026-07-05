@@ -13,6 +13,8 @@ const {
   deleteUser,
   auditLogs,
   adminDashboard,
+  getSystemSettings,
+  updateSystemSettings,
 } = require("../controllers/AdminController");
 
 router.get(
@@ -38,6 +40,19 @@ router.put(
   protect,
   admin,
   lockUser
+);
+router.get(
+  "/settings",
+  protect,
+  admin,
+  getSystemSettings
+);
+
+router.put(
+  "/settings",
+  protect,
+  admin,
+  updateSystemSettings
 );
 
 router.put(

@@ -111,8 +111,8 @@ router.post(
 =========================================== */
 router.post(
   "/mfa/verify",
-  protect,
   [
+    body("userId").notEmpty(),
     body("otp")
       .isLength({ min: 6, max: 6 })
       .withMessage("OTP must be 6 digits"),

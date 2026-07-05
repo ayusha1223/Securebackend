@@ -73,13 +73,6 @@ const loginUser = async (email, password) => {
   const user = await User.findOne({
     email: email.toLowerCase(),
   });
-  console.log("LOGIN USER:");
-console.log({
-  email: user?.email,
-  failedLoginAttempts: user?.failedLoginAttempts,
-  lockUntil: user?.lockUntil,
-  isVerified: user?.isVerified,
-});
 
   if (!user) {
     throw new Error("Invalid email or password");
@@ -99,7 +92,6 @@ console.log({
     password,
     user.password
   );
-  console.log("Password Match:", isMatch);
 
   if (!isMatch) {
     user.failedLoginAttempts++;
@@ -118,18 +110,38 @@ console.log({
 
   user.failedLoginAttempts = 0;
   user.lockUntil = null;
-
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
-
-  user.refreshToken = refreshToken;
   user.lastLogin = new Date();
 
   await user.save();
 
+  // ------------------------------
+  // MFA Enabled
+  // ------------------------------
+  if (user.mfaEnabled) {
+    await sendMFA(user._id);
+
+    return {
+      requiresMFA: true,
+      userId: user._id,
+      email: user.email,
+    };
+  }
+
+  // ------------------------------
+  // Normal Login
+  // ------------------------------
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  user.refreshToken = refreshToken;
+  await user.save();
+
   return {
+    requiresMFA: false,
+
     accessToken,
     refreshToken,
+
     user: {
       id: user._id,
       firstName: user.firstName,

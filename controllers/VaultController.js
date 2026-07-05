@@ -1,3 +1,4 @@
+const Vault = require("../models/Vault");
 const {
   createVault,
   getAllVaults,
@@ -9,9 +10,11 @@ const {
   getFavouriteVaults,
   toggleFavourite,
 } = require("../services/vaultService");
+
 const {
   createAuditLog,
 } = require("../services/auditService");
+
 
 /* ============================
    Create Password
@@ -136,6 +139,98 @@ const removePassword = async (req, res) => {
     });
   }
 };
+/* ===========================================
+   Password Health Dashboard
+=========================================== */
+const getPasswordHealth = async (req, res) => {
+  try {
+    console.log("\n========== PASSWORD HEALTH ==========");
+
+    console.log("req.user:");
+    console.log(req.user);
+
+    console.log("Logged User ID:", req.user._id);
+
+    // Find ALL vaults
+    const allVaults = await Vault.find();
+
+    console.log("Total Vaults in DB:", allVaults.length);
+
+    allVaults.forEach((v, index) => {
+      console.log(
+        `${index + 1}. Vault User: ${v.user.toString()} | Website: ${v.websiteName}`
+      );
+    });
+
+    // Find current user's vaults
+    const vaults = await Vault.find({
+      user: req.user._id,
+    });
+
+    console.log("Vaults Found For Current User:", vaults.length);
+
+    const total = vaults.length;
+
+    let strong = 0;
+    let weak = 0;
+    let reused = 0;
+    let expired = 0;
+
+    const passwordMap = {};
+
+    vaults.forEach((item) => {
+      if (item.password.length >= 12) {
+        strong++;
+      } else {
+        weak++;
+      }
+
+      if (
+        item.passwordExpiry &&
+        item.passwordExpiry < new Date()
+      ) {
+        expired++;
+      }
+
+      passwordMap[item.password] =
+        (passwordMap[item.password] || 0) + 1;
+    });
+
+    Object.values(passwordMap).forEach((count) => {
+      if (count > 1) {
+        reused += count;
+      }
+    });
+
+    let score = 100;
+
+    score -= weak * 5;
+    score -= reused * 3;
+    score -= expired * 4;
+
+    if (score < 0) score = 0;
+
+    res.json({
+      success: true,
+      data: {
+        total,
+        strong,
+        weak,
+        reused,
+        expired,
+        score,
+      },
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
 
 /* ============================
    Search Passwords
@@ -236,4 +331,5 @@ module.exports = {
   getCategoryPasswords,
   getFavourites,
   favouritePassword,
+  getPasswordHealth,
 };

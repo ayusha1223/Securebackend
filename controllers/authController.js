@@ -1,3 +1,5 @@
+const User = require("../models/User");
+
 const {
   registerUser,
   loginUser,
@@ -8,9 +10,15 @@ const {
   sendMFA,
   verifyMFA,
 } = require("../services/authService");
+
 const {
   createAuditLog,
 } = require("../services/auditService");
+
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/generateToken");
 
 /* ===========================================
    Register
@@ -41,18 +49,29 @@ const login = async (req, res) => {
 
     const result = await loginUser(email, password);
 
+    if (result.requiresMFA) {
+      return res.status(200).json({
+        success: true,
+        requiresMFA: true,
+        userId: result.userId,
+        email: result.email,
+        message: "OTP sent to your email.",
+      });
+    }
+
     await createAuditLog({
-  user: result.user.id,
-  action: "LOGIN",
-  resource: "Authentication",
-  req,
-});
+      user: result.user.id,
+      action: "LOGIN",
+      resource: "Authentication",
+      req,
+    });
 
     res.status(200).json({
       success: true,
       message: "Login successful",
       ...result,
     });
+
   } catch (error) {
     res.status(401).json({
       success: false,
@@ -108,21 +127,21 @@ const resetUserPassword = async (req, res) => {
       req.params.token,
       req.body.password
     );
-    const user = req.user ? req.user._id : null;
 
-if (user) {
-  await createAuditLog({
-    user,
-    action: "PASSWORD_RESET",
-    resource: "Authentication",
-    req,
-  });
-}
+    if (req.user) {
+      await createAuditLog({
+        user: req.user._id,
+        action: "PASSWORD_RESET",
+        resource: "Authentication",
+        req,
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "Password reset successfully.",
     });
+
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -142,6 +161,7 @@ const enableUserMFA = async (req, res) => {
       success: true,
       message: "MFA enabled.",
     });
+
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -161,6 +181,7 @@ const sendUserMFA = async (req, res) => {
       success: true,
       message: "OTP sent successfully.",
     });
+
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -174,12 +195,41 @@ const sendUserMFA = async (req, res) => {
 =========================================== */
 const verifyUserMFA = async (req, res) => {
   try {
-    await verifyMFA(req.user._id, req.body.otp);
+    const { userId, otp } = req.body;
+
+    await verifyMFA(userId, otp);
+
+    const user = await User.findById(userId);
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    await createAuditLog({
+      user: user._id,
+      action: "LOGIN",
+      resource: "Authentication",
+      req,
+    });
 
     res.status(200).json({
       success: true,
-      message: "OTP verified successfully.",
+      message: "Login successful.",
+
+      accessToken,
+      refreshToken,
+
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+      },
     });
+
   } catch (error) {
     res.status(400).json({
       success: false,

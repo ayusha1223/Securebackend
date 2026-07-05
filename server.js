@@ -15,9 +15,6 @@ const vaultRoutes = require("./routes/vaultRoutes");
 const utilityRoutes = require("./routes/utilityRoutes");
 const auditRoutes = require("./routes/auditRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-
-
-
 connectDB();
 
 const app = express();
@@ -45,7 +42,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
-app.use("/api/utils", utilityRoutes);
+app.use("/api/utility", utilityRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/admin", adminRoutes);
 
