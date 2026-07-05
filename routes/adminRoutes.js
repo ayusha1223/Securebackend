@@ -1,0 +1,59 @@
+const express = require("express");
+
+const router = express.Router();
+
+const protect = require("../middleware/auth");
+const admin = require("../middleware/admin");
+
+const {
+  getUsers,
+  lockUser,
+  unlockUser,
+  deleteUser,
+  auditLogs,
+} = require("../controllers/AdminController");
+
+/* ===========================================
+   Users
+=========================================== */
+
+router.get(
+  "/users",
+  protect,
+  admin,
+  getUsers
+);
+
+router.put(
+  "/users/:id/lock",
+  protect,
+  admin,
+  lockUser
+);
+
+router.put(
+  "/users/:id/unlock",
+  protect,
+  admin,
+  unlockUser
+);
+
+router.delete(
+  "/users/:id",
+  protect,
+  admin,
+  deleteUser
+);
+
+/* ===========================================
+   Audit Logs
+=========================================== */
+
+router.get(
+  "/audit-logs",
+  protect,
+  admin,
+  auditLogs
+);
+
+module.exports = router;
