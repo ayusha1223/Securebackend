@@ -1,5 +1,9 @@
 const express = require("express");
 const dotenv = require("dotenv");
+
+// Load environment variables FIRST
+dotenv.config();
+
 const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
@@ -7,8 +11,9 @@ const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const vaultRoutes = require("./routes/vaultRoutes");
 
-dotenv.config();
+
 
 connectDB();
 
@@ -36,6 +41,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/vault", vaultRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
