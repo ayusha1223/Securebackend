@@ -7,9 +7,12 @@ const validate = require("../middleware/validate");
 
 const {
   register,
+  login,
 } = require("../controllers/AuthController");
 
-// Register
+/* ===========================================
+   Register
+=========================================== */
 router.post(
   "/register",
   [
@@ -24,8 +27,10 @@ router.post(
       .withMessage("Last name is required"),
 
     body("email")
+      .trim()
       .isEmail()
-      .withMessage("Valid email is required"),
+      .withMessage("Valid email is required")
+      .normalizeEmail(),
 
     body("password")
       .isLength({ min: 8 })
@@ -33,6 +38,26 @@ router.post(
   ],
   validate,
   register
+);
+
+/* ===========================================
+   Login
+=========================================== */
+router.post(
+  "/login",
+  [
+    body("email")
+      .trim()
+      .isEmail()
+      .withMessage("Valid email is required")
+      .normalizeEmail(),
+
+    body("password")
+      .notEmpty()
+      .withMessage("Password is required"),
+  ],
+  validate,
+  login
 );
 
 module.exports = router;
