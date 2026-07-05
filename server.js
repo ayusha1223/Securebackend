@@ -13,6 +13,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const vaultRoutes = require("./routes/vaultRoutes");
 const utilityRoutes = require("./routes/utilityRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 
 
 
@@ -44,6 +45,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/vault", vaultRoutes);
 app.use("/api/utils", utilityRoutes);
+app.use("/api/audit", auditRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

@@ -8,6 +8,9 @@ const {
   sendMFA,
   verifyMFA,
 } = require("../services/authService");
+const {
+  createAuditLog,
+} = require("../services/auditService");
 
 /* ===========================================
    Register
@@ -37,6 +40,13 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     const result = await loginUser(email, password);
+
+    await createAuditLog({
+  user: result.user.id,
+  action: "LOGIN",
+  resource: "Authentication",
+  req,
+});
 
     res.status(200).json({
       success: true,
@@ -98,6 +108,16 @@ const resetUserPassword = async (req, res) => {
       req.params.token,
       req.body.password
     );
+    const user = req.user ? req.user._id : null;
+
+if (user) {
+  await createAuditLog({
+    user,
+    action: "PASSWORD_RESET",
+    resource: "Authentication",
+    req,
+  });
+}
 
     res.status(200).json({
       success: true,

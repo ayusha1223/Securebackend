@@ -9,6 +9,9 @@ const {
   getFavouriteVaults,
   toggleFavourite,
 } = require("../services/vaultService");
+const {
+  createAuditLog,
+} = require("../services/auditService");
 
 /* ============================
    Create Password
@@ -16,6 +19,13 @@ const {
 const addPassword = async (req, res) => {
   try {
     const vault = await createVault(req.user._id, req.body);
+    await createAuditLog({
+  user: req.user._id,
+  action: "CREATE_PASSWORD",
+  resource: "Vault",
+  resourceId: vault._id,
+  req,
+});
 
     res.status(201).json({
       success: true,
@@ -80,6 +90,14 @@ const editPassword = async (req, res) => {
       req.body
     );
 
+    await createAuditLog({
+      user: req.user._id,
+      action: "UPDATE_PASSWORD",
+      resource: "Vault",
+      resourceId: vault._id,
+      req,
+    });
+
     res.status(200).json({
       success: true,
       message: "Password updated successfully",
@@ -92,13 +110,20 @@ const editPassword = async (req, res) => {
     });
   }
 };
-
 /* ============================
    Delete Password
 ============================ */
 const removePassword = async (req, res) => {
   try {
     await deleteVault(req.user._id, req.params.id);
+
+    await createAuditLog({
+      user: req.user._id,
+      action: "DELETE_PASSWORD",
+      resource: "Vault",
+      resourceId: req.params.id,
+      req,
+    });
 
     res.status(200).json({
       success: true,
