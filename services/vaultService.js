@@ -110,6 +110,59 @@ const deleteVault = async (userId, vaultId) => {
 
   return true;
 };
+/* ============================
+   Search Passwords
+============================ */
+const searchVaults = async (userId, query) => {
+  return await Vault.find({
+    user: userId,
+    $or: [
+      { websiteName: { $regex: query, $options: "i" } },
+      { username: { $regex: query, $options: "i" } },
+      { email: { $regex: query, $options: "i" } }
+    ]
+  });
+};
+
+/* ============================
+   Get By Category
+============================ */
+const getVaultsByCategory = async (userId, category) => {
+  return await Vault.find({
+    user: userId,
+    category,
+  });
+};
+
+/* ============================
+   Get Favourites
+============================ */
+const getFavouriteVaults = async (userId) => {
+  return await Vault.find({
+    user: userId,
+    favourite: true,
+  });
+};
+
+/* ============================
+   Toggle Favourite
+============================ */
+const toggleFavourite = async (userId, vaultId) => {
+  const vault = await Vault.findOne({
+    _id: vaultId,
+    user: userId,
+  });
+
+  if (!vault) {
+    throw new Error("Password not found");
+  }
+
+  vault.favourite = !vault.favourite;
+
+  await vault.save();
+
+  return vault;
+};
 
 module.exports = {
   createVault,
@@ -117,4 +170,8 @@ module.exports = {
   getVaultById,
   updateVault,
   deleteVault,
+  searchVaults,
+  getVaultsByCategory,
+  getFavouriteVaults,
+  toggleFavourite,
 };
