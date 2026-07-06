@@ -16,6 +16,8 @@ const verifyCaptcha = async (token) => {
     }
   );
 
+  console.log("Google reCAPTCHA response:", response.data);
+
   if (!response.data.success) {
     throw new Error("Invalid reCAPTCHA.");
   }
@@ -23,6 +25,4 @@ const verifyCaptcha = async (token) => {
   return true;
 };
 
-module.exports = {
-  verifyCaptcha,
-};
+module.exports = { verifyCaptcha };
