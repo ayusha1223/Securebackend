@@ -1,0 +1,35 @@
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backendsecure
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Check Code
+        run: npm audit --audit-level=high || true

@@ -37,8 +37,18 @@ for (const vault of existingVaults) {
    Get All Passwords
 ============================ */
 const getAllVaults = async (userId) => {
-  return await Vault.find({ user: userId }).sort({
+  const vaults = await Vault.find({
+    user: userId,
+  }).sort({
     createdAt: -1,
+  });
+
+  return vaults.map((vault) => {
+    const obj = vault.toObject();
+
+    obj.password = decrypt(vault.password);
+
+    return obj;
   });
 };
 
