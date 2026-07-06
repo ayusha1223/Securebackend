@@ -15,6 +15,7 @@ const {
   resetUserPassword,
   enableUserMFA,
   sendUserMFA,
+  resendUserMFA,
   verifyUserMFA,
 } = require("../controllers/AuthController");
 
@@ -104,6 +105,17 @@ router.post(
   "/mfa/send",
   protect,
   sendUserMFA
+);
+/* ===========================================
+   Resend OTP
+=========================================== */
+router.post(
+  "/mfa/resend",
+  [
+    body("userId").notEmpty(),
+  ],
+  validate,
+  resendUserMFA
 );
 
 /* ===========================================

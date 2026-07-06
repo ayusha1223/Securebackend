@@ -39,6 +39,27 @@ const register = async (req, res) => {
     });
   }
 };
+/* ===========================================
+   Resend MFA OTP
+=========================================== */
+const resendUserMFA = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    await sendMFA(userId);
+
+    res.status(200).json({
+      success: true,
+      message: "OTP resent successfully.",
+    });
+
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 /* ===========================================
    Login
@@ -254,5 +275,6 @@ module.exports = {
   resetUserPassword,
   enableUserMFA,
   sendUserMFA,
+  resendUserMFA,
   verifyUserMFA,
 };

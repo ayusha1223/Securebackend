@@ -14,6 +14,10 @@ const {
 const {
   createAuditLog,
 } = require("../services/auditService");
+const {
+  analyzePassword,
+} = require("../utils/passwordStrength");
+const { decrypt } = require("../utils/encrypt");
 
 
 /* ============================
@@ -144,81 +148,75 @@ const removePassword = async (req, res) => {
 =========================================== */
 const getPasswordHealth = async (req, res) => {
   try {
-    console.log("\n========== PASSWORD HEALTH ==========");
-
-    console.log("req.user:");
-    console.log(req.user);
-
-    console.log("Logged User ID:", req.user._id);
-
-    // Find ALL vaults
-    const allVaults = await Vault.find();
-
-    console.log("Total Vaults in DB:", allVaults.length);
-
-    allVaults.forEach((v, index) => {
-      console.log(
-        `${index + 1}. Vault User: ${v.user.toString()} | Website: ${v.websiteName}`
-      );
-    });
-
-    // Find current user's vaults
     const vaults = await Vault.find({
       user: req.user._id,
     });
 
-    console.log("Vaults Found For Current User:", vaults.length);
-
-    const total = vaults.length;
-
-    let strong = 0;
-    let weak = 0;
-    let reused = 0;
-    let expired = 0;
+    const weakPasswords = [];
+    const reused = [];
+    const expired = [];
+    const expiringSoon = [];
 
     const passwordMap = {};
 
-    vaults.forEach((item) => {
-      if (item.password.length >= 12) {
-        strong++;
+    const today = new Date();
+
+    vaults.forEach((vault) => {
+      const plainPassword = decrypt(vault.password);
+
+      const analysis = analyzePassword(plainPassword);
+
+      if (analysis.strength === "Weak") {
+        weakPasswords.push(vault);
+      }
+
+      if (passwordMap[plainPassword]) {
+        reused.push(vault);
       } else {
-        weak++;
+        passwordMap[plainPassword] = true;
       }
 
-      if (
-        item.passwordExpiry &&
-        item.passwordExpiry < new Date()
-      ) {
-        expired++;
-      }
+      if (vault.passwordExpiry) {
+        const expiry = new Date(vault.passwordExpiry);
 
-      passwordMap[item.password] =
-        (passwordMap[item.password] || 0) + 1;
+        if (expiry < today) {
+          expired.push(vault);
+        } else {
+          const days =
+            (expiry - today) /
+            (1000 * 60 * 60 * 24);
+
+          if (days <= 7) {
+            expiringSoon.push(vault);
+          }
+        }
+      }
     });
 
-    Object.values(passwordMap).forEach((count) => {
-      if (count > 1) {
-        reused += count;
-      }
-    });
+    const score =
+      vaults.length === 0
+        ? 100
+        : Math.max(
+            0,
+            Math.round(
+              ((vaults.length -
+                weakPasswords.length -
+                reused.length -
+                expired.length) /
+                vaults.length) *
+                100
+            )
+          );
 
-    let score = 100;
-
-    score -= weak * 5;
-    score -= reused * 3;
-    score -= expired * 4;
-
-    if (score < 0) score = 0;
-
-    res.json({
+    res.status(200).json({
       success: true,
       data: {
-        total,
-        strong,
-        weak,
+        score,
+        vaults,
+        weakPasswords,
         reused,
         expired,
-        score,
+        expiringSoon,
       },
     });
 

@@ -277,34 +277,35 @@ const enableMFA = async (userId) => {
 const sendMFA = async (userId) => {
   const user = await User.findById(userId);
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+  console.log("================================");
+  console.log("User ID:", userId);
+  console.log("Recipient:", user.email);
 
   const otp = Math.floor(
     100000 + Math.random() * 900000
   ).toString();
 
+  console.log("Generated OTP:", otp);
+
   user.mfaCode = otp;
-  user.mfaExpires = new Date(Date.now() + 5 * 60 * 1000);
+ user.mfaExpires = new Date(Date.now() + 30 * 1000);
 
   await user.save();
 
-  await sendEmail({
-    to: user.email,
-    subject: "SecureVault Login OTP",
-    html: `
-      <h2>SecureVault OTP</h2>
+console.log("Recipient:", user.email);
+console.log("OTP:", otp);
 
-      <p>Your verification code is:</p>
+await sendEmail({
+  to: user.email,
+  subject: `SecureVault OTP ${Date.now()}`,
+  html: `
+    <h2>SecureVault OTP</h2>
+    <h1>${otp}</h1>
+  `,
+});
 
-      <h1 style="letter-spacing:6px;">
-        ${otp}
-      </h1>
-
-      <p>This code expires in 5 minutes.</p>
-    `,
-  });
+  console.log("Email successfully sent.");
+  console.log("================================");
 
   return true;
 };
