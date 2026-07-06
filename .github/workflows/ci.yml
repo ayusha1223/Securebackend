@@ -15,10 +15,6 @@ jobs:
   backend:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: backendsecure
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -31,5 +27,5 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Check Code
+      - name: Run Security Audit
         run: npm audit --audit-level=high || true
