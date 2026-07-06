@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
+const { verifyCaptcha } = require("./captchaService");
 
 const {
   generateAccessToken,
@@ -69,7 +70,12 @@ const registerUser = async (userData) => {
 /* ===========================================
    LOGIN
 =========================================== */
-const loginUser = async (email, password) => {
+const loginUser = async (
+  email,
+  password,
+  captchaToken
+) => {
+  await verifyCaptcha(captchaToken);
   const user = await User.findOne({
     email: email.toLowerCase(),
   });

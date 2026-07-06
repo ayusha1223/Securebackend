@@ -45,9 +45,17 @@ const register = async (req, res) => {
 =========================================== */
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const {
+  email,
+  password,
+  captchaToken,
+} = req.body;
 
-    const result = await loginUser(email, password);
+const result = await loginUser(
+  email,
+  password,
+  captchaToken
+);
 
     if (result.requiresMFA) {
       return res.status(200).json({
