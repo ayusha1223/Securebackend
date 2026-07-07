@@ -1,6 +1,9 @@
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const User = require("../models/User");
 const { verifyCaptcha } = require("./captchaService");
+const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
 
 const {
   generateAccessToken,
@@ -34,7 +37,7 @@ const registerUser = async (userData) => {
     lastName,
     email: email.toLowerCase(),
     password: hashedPassword,
-    verificationToken,
+   verificationToken: hashToken(verificationToken),
     isVerified: false,
   });
 
@@ -162,7 +165,7 @@ const loginUser = async (
 =========================================== */
 const verifyEmail = async (token) => {
   const user = await User.findOne({
-    verificationToken: token,
+    verificationToken: hashToken(token),
   });
 
   if (!user) {
@@ -185,13 +188,15 @@ const forgotPassword = async (email) => {
     email: email.toLowerCase(),
   });
 
+  // Never reveal whether the email exists - a different response for
+  // known vs unknown emails lets an attacker enumerate accounts.
   if (!user) {
-    throw new Error("User not found");
+    return true;
   }
 
   const resetToken = generateResetToken();
 
-  user.passwordResetToken = resetToken;
+ user.passwordResetToken = hashToken(resetToken);
   user.passwordResetExpires = new Date(
     Date.now() + 15 * 60 * 1000
   );
@@ -229,7 +234,7 @@ const forgotPassword = async (email) => {
 =========================================== */
 const resetPassword = async (token, password) => {
   const user = await User.findOne({
-    passwordResetToken: token,
+    passwordResetToken: hashToken(token),
   });
 
   if (!user) {
@@ -277,35 +282,32 @@ const enableMFA = async (userId) => {
 const sendMFA = async (userId) => {
   const user = await User.findById(userId);
 
-  console.log("================================");
-  console.log("User ID:", userId);
-  console.log("Recipient:", user.email);
+  if (!user) {
+    throw new Error("User not found");
+  }
 
   const otp = Math.floor(
     100000 + Math.random() * 900000
   ).toString();
 
-  console.log("Generated OTP:", otp);
-
+  // 5 minutes, not 30 seconds - a real user can't read an email and
+  // type a code in under 30 seconds.
   user.mfaCode = otp;
- user.mfaExpires = new Date(Date.now() + 30 * 1000);
+  user.mfaExpires = new Date(Date.now() + 5 * 60 * 1000);
 
   await user.save();
 
-console.log("Recipient:", user.email);
-console.log("OTP:", otp);
-
-await sendEmail({
-  to: user.email,
-  subject: `SecureVault OTP ${Date.now()}`,
-  html: `
-    <h2>SecureVault OTP</h2>
-    <h1>${otp}</h1>
-  `,
-});
-
-  console.log("Email successfully sent.");
-  console.log("================================");
+  // Never log the OTP - anyone with log access could complete login
+  // as the victim without ever touching their inbox.
+  await sendEmail({
+    to: user.email,
+    subject: "SecureVault - Your verification code",
+    html: `
+      <h2>SecureVault OTP</h2>
+      <h1>${otp}</h1>
+      <p>This code expires in 5 minutes.</p>
+    `,
+  });
 
   return true;
 };

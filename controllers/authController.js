@@ -134,17 +134,14 @@ const verifyUserEmail = async (req, res) => {
 const forgotUserPassword = async (req, res) => {
   try {
     await forgotPassword(req.body.email);
-
-    res.status(200).json({
-      success: true,
-      message: "Password reset email sent.",
-    });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
-    });
+    // Swallow deliberately - never leak existence via error content
   }
+
+  res.status(200).json({
+    success: true,
+    message: "If an account exists for that email, a reset link has been sent.",
+  });
 };
 
 /* ===========================================

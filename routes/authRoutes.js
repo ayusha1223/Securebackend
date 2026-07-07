@@ -4,7 +4,14 @@ const { body } = require("express-validator");
 const router = express.Router();
 
 const validate = require("../middleware/validate");
-const loginLimiter = require("../middleware/rateLimiter");
+const {
+  loginLimiter,
+  registerLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter,
+  mfaVerifyLimiter,
+  mfaSendLimiter,
+} = require("../middleware/rateLimiter");
 const protect = require("../middleware/auth");
 
 const {
