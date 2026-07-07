@@ -23,7 +23,10 @@ app.use(helmet());
 
 app.use(
   cors({
-    origin: "http://localhost:5174",
+    origin: [
+      "http://localhost:5174",
+      "http://192.168.1.74:5174",
+    ],
     credentials: true,
   })
 );
