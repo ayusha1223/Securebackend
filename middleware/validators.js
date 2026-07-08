@@ -1,4 +1,6 @@
-const { body } = require("express-validator");
+﻿const { body } = require("express-validator");
+
+// Reusable strong-password policy: length + complexity.
 const passwordPolicy = (field = "password") => [
   body(field)
     .isString().withMessage("Password is required")
