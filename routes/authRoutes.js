@@ -1,8 +1,6 @@
 const express = require("express");
 const { body } = require("express-validator");
-
 const router = express.Router();
-
 const validate = require("../middleware/validate");
 const {
   loginLimiter,
@@ -13,6 +11,7 @@ const {
   mfaSendLimiter,
 } = require("../middleware/rateLimiter");
 const protect = require("../middleware/auth");
+const { passwordPolicy } = require("../middleware/validators");
 
 const {
   register,
@@ -35,11 +34,12 @@ const {
 =========================================== */
 router.post(
   "/register",
+  registerLimiter,
   [
     body("firstName").trim().notEmpty(),
     body("lastName").trim().notEmpty(),
     body("email").isEmail().normalizeEmail(),
-    body("password").isLength({ min: 8 }),
+    ...passwordPolicy("password"),
   ],
   validate,
   register
@@ -77,6 +77,7 @@ router.get(
 =========================================== */
 router.post(
   "/forgot-password",
+  forgotPasswordLimiter,
   [
     body("email").isEmail().normalizeEmail(),
   ],
@@ -89,9 +90,8 @@ router.post(
 =========================================== */
 router.post(
   "/reset-password/:token",
-  [
-    body("password").isLength({ min: 8 }),
-  ],
+  resetPasswordLimiter,
+  [...passwordPolicy("password")],
   validate,
   resetUserPassword
 );
@@ -111,8 +111,10 @@ router.post(
 router.post(
   "/mfa/send",
   protect,
+  mfaSendLimiter,
   sendUserMFA
 );
+
 /* ===========================================
    Resend OTP
 =========================================== */
@@ -130,6 +132,7 @@ router.post(
 =========================================== */
 router.post(
   "/mfa/verify",
+  mfaVerifyLimiter,
   [
     body("userId").notEmpty(),
     body("otp")
