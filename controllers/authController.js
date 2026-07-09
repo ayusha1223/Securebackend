@@ -95,11 +95,28 @@ const result = await loginUser(
       req,
     });
 
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      ...result,
-    });
+    res
+  .cookie("accessToken", result.accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 15 * 60 * 1000,
+  })
+  .cookie("refreshToken", result.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+  .status(200)
+ .json({
+  success: true,
+  message: "Login successful",
+  requiresMFA: false,
+  accessToken: result.accessToken,
+  refreshToken: result.refreshToken,
+  user: result.user,
+});
 
   } catch (error) {
     res.status(401).json({
@@ -240,21 +257,33 @@ const verifyUserMFA = async (req, res) => {
       req,
     });
 
-    res.status(200).json({
-      success: true,
-      message: "Login successful.",
-
-      accessToken,
-      refreshToken,
-
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-      },
-    });
+   res
+  .cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 15 * 60 * 1000,
+  })
+  .cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+  .status(200)
+  .json({
+  success: true,
+  message: "Login successful.",
+  accessToken,
+  refreshToken,
+  user: {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+  },
+});
 
   } catch (error) {
     res.status(400).json({
@@ -264,9 +293,52 @@ const verifyUserMFA = async (req, res) => {
   }
 };
 
+/* ===========================================
+   Logout
+=========================================== */
+const logout = async (req, res) => {
+  try {
+    if (req.user) {
+      req.user.refreshToken = null;
+      await req.user.save();
+
+      await createAuditLog({
+        user: req.user._id,
+        action: "LOGOUT",
+        resource: "Authentication",
+        req,
+      });
+    }
+
+    res
+      .clearCookie("accessToken", {
+        httpOnly: true,
+        sameSite: "Strict",
+        secure: process.env.NODE_ENV === "production",
+      })
+      .clearCookie("refreshToken", {
+        httpOnly: true,
+        sameSite: "Strict",
+        secure: process.env.NODE_ENV === "production",
+      })
+      .status(200)
+      .json({
+        success: true,
+        message: "Logged out successfully.",
+      });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
+  logout,
   verifyUserEmail,
   forgotUserPassword,
   resetUserPassword,

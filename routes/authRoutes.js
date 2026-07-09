@@ -16,6 +16,7 @@ const { passwordPolicy } = require("../middleware/validators");
 const {
   register,
   login,
+  logout,
   verifyUserEmail,
   forgotUserPassword,
   resetUserPassword,
@@ -58,6 +59,7 @@ router.post(
   validate,
   login
 );
+router.post("/logout", protect, logout);
 
 /* ===========================================
    Refresh Token

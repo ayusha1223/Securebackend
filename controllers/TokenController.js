@@ -1,10 +1,14 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const { generateAccessToken } = require("../utils/generateToken");
+
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/generateToken");
 
 const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -27,12 +31,31 @@ const refreshToken = async (req, res) => {
       });
     }
 
-    const accessToken = generateAccessToken(user);
+    // Rotate tokens
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
 
-    res.status(200).json({
-      success: true,
-      accessToken,
-    });
+    user.refreshToken = newRefreshToken;
+    await user.save();
+
+    res
+      .cookie("accessToken", newAccessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 15 * 60 * 1000,
+      })
+      .cookie("refreshToken", newRefreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json({
+        success: true,
+        accessToken: newAccessToken,
+      });
 
   } catch (error) {
     res.status(401).json({
