@@ -37,14 +37,23 @@ const vaultSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    // Keyed HMAC of the plaintext password.
+    // Enables reuse detection without decrypting the vault.
+    passwordFingerprint: {
+      type: String,
+      required: true,
+      index: true,
+    },
+
     passwordExpiry: {
-  type: Date,
-  default: () => {
-    const date = new Date();
-    date.setDate(date.getDate() + 90);
-    return date;
-  },
-},
+      type: Date,
+      default: () => {
+        const date = new Date();
+        date.setDate(date.getDate() + 90);
+        return date;
+      },
+    },
 
     category: {
       type: String,

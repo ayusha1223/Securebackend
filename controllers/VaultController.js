@@ -39,12 +39,23 @@ const addPassword = async (req, res) => {
       message: "Password saved successfully",
       data: vault,
     });
-  } catch (error) {
-    res.status(500).json({
+ } catch (error) {
+
+  if (
+    error.message ===
+    "This password is already used in another account."
+  ) {
+    return res.status(409).json({
       success: false,
       message: error.message,
     });
   }
+
+  res.status(500).json({
+    success: false,
+    message: error.message,
+  });
+}
 };
 
 /* ============================

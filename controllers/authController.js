@@ -8,6 +8,7 @@ const {
   resetPassword,
   enableMFA,
   sendMFA,
+   getUserByMfaToken,
   verifyMFA,
 } = require("../services/authService");
 
@@ -44,15 +45,16 @@ const register = async (req, res) => {
 =========================================== */
 const resendUserMFA = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { mfaToken } = req.body;
 
-    await sendMFA(userId);
+    const user = await getUserByMfaToken(mfaToken);
+    const newMfaToken = await sendMFA(user._id);
 
     res.status(200).json({
       success: true,
+      mfaToken: newMfaToken,
       message: "OTP resent successfully.",
     });
-
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -78,11 +80,11 @@ const result = await loginUser(
   captchaToken
 );
 
-    if (result.requiresMFA) {
+   if (result.requiresMFA) {
       return res.status(200).json({
         success: true,
         requiresMFA: true,
-        userId: result.userId,
+        mfaToken: result.mfaToken,
         email: result.email,
         message: "OTP sent to your email.",
       });
@@ -95,18 +97,21 @@ const result = await loginUser(
       req,
     });
 
+    
+    // Store the access token in a HttpOnly cookie
     res
   .cookie("accessToken", result.accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-    maxAge: 15 * 60 * 1000,
+    httpOnly: true, // Prevent JavaScript from reading the cookie
+    secure: process.env.NODE_ENV === "production", // Send only over HTTPS
+    sameSite: "Strict",  // Protect against CSRF attacks
+    maxAge: 15 * 60 * 1000, // Expire after 15 minutes
   })
+  // Store the refresh token securely
   .cookie("refreshToken", result.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,  // Prevent client-side access
+    secure: process.env.NODE_ENV === "production", // HTTPS only
+    sameSite: "Strict", // Restrict cross-site requests
+    maxAge: 7 * 24 * 60 * 60 * 1000, // Expire after 7 days
   })
   .status(200)
  .json({
@@ -238,11 +243,9 @@ const sendUserMFA = async (req, res) => {
 =========================================== */
 const verifyUserMFA = async (req, res) => {
   try {
-    const { userId, otp } = req.body;
+    const { mfaToken, otp } = req.body;
 
-    await verifyMFA(userId, otp);
-
-    const user = await User.findById(userId);
+    const user = await verifyMFA(mfaToken, otp);
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -257,34 +260,31 @@ const verifyUserMFA = async (req, res) => {
       req,
     });
 
-   res
-  .cookie("accessToken", accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-    maxAge: 15 * 60 * 1000,
-  })
-  .cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  })
-  .status(200)
-  .json({
-  success: true,
-  message: "Login successful.",
-  accessToken,
-  refreshToken,
-  user: {
-    id: user._id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    role: user.role,
-  },
-});
-
+    res
+      .cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 15 * 60 * 1000,
+      })
+      .cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      })
+      .status(200)
+      .json({
+        success: true,
+        message: "Login successful.",
+        user: {
+          id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+        },
+      });
   } catch (error) {
     res.status(400).json({
       success: false,

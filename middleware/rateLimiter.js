@@ -66,6 +66,17 @@ const mfaSendLimiter = rateLimit({
   },
 });
 
+const mfaResendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many OTP resend requests. Please try again after 15 minutes.",
+  },
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
@@ -73,4 +84,5 @@ module.exports = {
   resetPasswordLimiter,
   mfaVerifyLimiter,
   mfaSendLimiter,
+  mfaResendLimiter
 };

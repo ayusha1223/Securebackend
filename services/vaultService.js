@@ -1,23 +1,27 @@
 const Vault = require("../models/Vault");
-const { encrypt, decrypt } = require("../utils/encrypt");
+const { encrypt, decrypt, fingerprint } = require("../utils/encrypt");
 
 /* ============================
    Create Password
 ============================ */
 const createVault = async (userId, data) => {
-  const existingVaults = await Vault.find({
-  user: userId,
-});
+  const fp = fingerprint(data.password);
 
-for (const vault of existingVaults) {
-  const existingPassword = decrypt(vault.password);
+  // Reuse detection via keyed HMAC fingerprint.
+  // Previously this decrypted every vault entry the user owned and compared
+  // plaintexts in memory - an O(n) decryption on every write with a large
+  // plaintext exposure surface. A single indexed query now achieves the same
+  // result with no decryption at all.
+  const duplicate = await Vault.findOne({
+    user: userId,
+    passwordFingerprint: fp,
+  });
 
-  if (existingPassword === data.password) {
+  if (duplicate) {
     throw new Error(
       "This password is already used in another account."
     );
   }
-}
 
   return await Vault.create({
     user: userId,
@@ -26,6 +30,7 @@ for (const vault of existingVaults) {
     username: data.username,
     email: data.email,
     password: encrypt(data.password),
+    passwordFingerprint: fp,
     category: data.category || "General",
     notes: data.notes || "",
     favourite: data.favourite || false,
@@ -46,7 +51,29 @@ const getAllVaults = async (userId) => {
   return vaults.map((vault) => {
     const obj = vault.toObject();
 
-    obj.password = decrypt(vault.password);
+    try {
+ try {
+  obj.password = decrypt(vault.password);
+} catch (err) {
+  console.log("========== BAD VAULT ==========");
+  console.log("ID:", vault._id);
+  console.log("Website:", vault.websiteName);
+  console.log("Password:", vault.password);
+  console.log(err);
+  throw err;
+}
+} catch (err) {
+  console.log(
+    "Bad vault:",
+    vault._id,
+    vault.websiteName,
+    vault.password
+  );
+  throw err;
+}
+
+    // Never expose the reuse fingerprint to the client
+    delete obj.passwordFingerprint;
 
     return obj;
   });
@@ -69,6 +96,8 @@ const getVaultById = async (userId, vaultId) => {
 
   result.password = decrypt(vault.password);
 
+  delete result.passwordFingerprint;
+
   return result;
 };
 
@@ -85,38 +114,33 @@ const updateVault = async (userId, vaultId, data) => {
     throw new Error("Password not found");
   }
 
-  // Prevent password reuse
+  // Prevent password reuse - fingerprint comparison, no decryption.
+  // The previous implementation wrapped decryption in a try/catch that
+  // silently swallowed errors, which would have concealed exactly the
+  // ciphertext tampering that AES-GCM now detects.
   if (data.password !== undefined) {
-    const allVaults = await Vault.find({
+    const fp = fingerprint(data.password);
+
+    const duplicate = await Vault.findOne({
       user: userId,
       _id: { $ne: vaultId },
+      passwordFingerprint: fp,
     });
 
-    for (const item of allVaults) {
-      try {
-        const existingPassword = decrypt(item.password);
-
-        if (existingPassword === data.password) {
-          throw new Error(
-            "This password is already used in another account."
-          );
-        }
-      } catch (err) {
-        if (
-          err.message ===
-          "This password is already used in another account."
-        ) {
-          throw err;
-        }
-      }
+    if (duplicate) {
+      throw new Error(
+        "This password is already used in another account."
+      );
     }
 
     vault.password = encrypt(data.password);
-  }
-  const expiry = new Date();
-expiry.setDate(expiry.getDate() + 90);
+    vault.passwordFingerprint = fp;
 
-vault.passwordExpiry = expiry;
+    // Reset the 90-day expiry only when the password actually changes
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 90);
+    vault.passwordExpiry = expiry;
+  }
 
   if (data.websiteName !== undefined)
     vault.websiteName = data.websiteName;
@@ -144,7 +168,10 @@ vault.passwordExpiry = expiry;
 
   await vault.save();
 
-  return vault;
+  const result = vault.toObject();
+  delete result.passwordFingerprint;
+
+  return result;
 };
 
 /* ============================
@@ -164,18 +191,23 @@ const deleteVault = async (userId, vaultId) => {
 
   return true;
 };
+
 /* ============================
    Search Passwords
+   Regex metacharacters are escaped to prevent regex injection
+   and ReDoS via user-supplied search terms.
 ============================ */
 const searchVaults = async (userId, query) => {
+  const safe = String(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
   return await Vault.find({
     user: userId,
     $or: [
-      { websiteName: { $regex: query, $options: "i" } },
-      { username: { $regex: query, $options: "i" } },
-      { email: { $regex: query, $options: "i" } }
-    ]
-  });
+      { websiteName: { $regex: safe, $options: "i" } },
+      { username: { $regex: safe, $options: "i" } },
+      { email: { $regex: safe, $options: "i" } },
+    ],
+  }).select("-passwordFingerprint");
 };
 
 /* ============================
@@ -185,7 +217,7 @@ const getVaultsByCategory = async (userId, category) => {
   return await Vault.find({
     user: userId,
     category,
-  });
+  }).select("-passwordFingerprint");
 };
 
 /* ============================
@@ -195,7 +227,7 @@ const getFavouriteVaults = async (userId) => {
   return await Vault.find({
     user: userId,
     favourite: true,
-  });
+  }).select("-passwordFingerprint");
 };
 
 /* ============================
@@ -215,7 +247,10 @@ const toggleFavourite = async (userId, vaultId) => {
 
   await vault.save();
 
-  return vault;
+  const result = vault.toObject();
+  delete result.passwordFingerprint;
+
+  return result;
 };
 
 module.exports = {

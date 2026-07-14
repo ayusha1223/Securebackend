@@ -1,7 +1,7 @@
 const express = require("express");
 
 const router = express.Router();
-
+const validateVault = require("../middleware/vaultValidation");
 const protect = require("../middleware/auth");
 
 const {
@@ -22,7 +22,12 @@ const {
 =========================================== */
 
 // Create Password
-router.post("/", protect, addPassword);
+router.post(
+  "/",
+  protect,
+  validateVault,
+  addPassword
+);
 
 // Get All Passwords
 router.get("/", protect, getPasswords);

@@ -9,6 +9,7 @@ const {
   resetPasswordLimiter,
   mfaVerifyLimiter,
   mfaSendLimiter,
+  mfaResendLimiter,
 } = require("../middleware/rateLimiter");
 const protect = require("../middleware/auth");
 const { passwordPolicy } = require("../middleware/validators");
@@ -122,8 +123,12 @@ router.post(
 =========================================== */
 router.post(
   "/mfa/resend",
+  mfaResendLimiter,
   [
-    body("userId").notEmpty(),
+    body("mfaToken")
+      .isHexadecimal()
+      .isLength({ min: 64, max: 64 })
+      .withMessage("Invalid MFA session"),
   ],
   validate,
   resendUserMFA
@@ -136,9 +141,13 @@ router.post(
   "/mfa/verify",
   mfaVerifyLimiter,
   [
-    body("userId").notEmpty(),
+    body("mfaToken")
+      .isHexadecimal()
+      .isLength({ min: 64, max: 64 })
+      .withMessage("Invalid MFA session"),
     body("otp")
       .isLength({ min: 6, max: 6 })
+      .isNumeric()
       .withMessage("OTP must be 6 digits"),
   ],
   validate,

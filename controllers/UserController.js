@@ -92,12 +92,13 @@ const changePassword = async (req, res) => {
       });
     }
 
-    user.password = await bcrypt.hash(
-      newPassword,
-      12
-    );
-
+    user.password = await bcrypt.hash(newPassword, 12);
     user.lastPasswordChange = new Date();
+
+    // Invalidate all existing sessions on password change (CWE-613).
+    // Clearing the stored refresh token forces re-authentication and
+    // locks out any session created before the change.
+    user.refreshToken = null;
 
     await user.save();
 

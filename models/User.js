@@ -88,6 +88,25 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    mfaAttempts: {
+  type: Number,
+  default: 0,
+},
+mfaAttempts: {
+      type: Number,
+      default: 0,
+    },
+
+    // Server-issued short-lived MFA session (replaces client-supplied userId)
+    mfaToken: {
+      type: String,
+      default: null,
+    },
+
+    mfaTokenExpires: {
+      type: Date,
+      default: null,
+    },
 
     // JWT Refresh Token
     refreshToken: {

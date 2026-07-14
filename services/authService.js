@@ -27,22 +27,22 @@ const registerUser = async (userData) => {
   if (existingUser) {
     throw new Error("Email already registered");
   }
-
+  // Hash password before storing in MongoDB
   const hashedPassword = await bcrypt.hash(password, 12);
-
+  // Generate an email verification token
   const verificationToken = generateVerificationToken();
 
   const user = await User.create({
     firstName,
     lastName,
     email: email.toLowerCase(),
+     // Store only the hashed verification token
     password: hashedPassword,
    verificationToken: hashToken(verificationToken),
     isVerified: false,
   });
-
   const verifyLink = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
-
+// Send the verification email to the user
   await sendEmail({
     to: user.email,
     subject: "Verify your SecureVault Account",
@@ -78,17 +78,15 @@ const loginUser = async (
   password,
   captchaToken
 ) => {
+  // Verify Google reCAPTCHA before authenticating the user
   await verifyCaptcha(captchaToken);
   const user = await User.findOne({
     email: email.toLowerCase(),
   });
 
-  if (!user) {
+ if (!user) {
+    await bcrypt.compare(password, "$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidin");
     throw new Error("Invalid email or password");
-  }
-
-  if (!user.isVerified) {
-    throw new Error("Please verify your email first.");
   }
 
   if (user.lockUntil && user.lockUntil > Date.now()) {
@@ -117,21 +115,26 @@ const loginUser = async (
     throw new Error("Invalid email or password");
   }
 
-  user.failedLoginAttempts = 0;
+ user.failedLoginAttempts = 0;
   user.lockUntil = null;
   user.lastLogin = new Date();
 
   await user.save();
 
+  // Reveal verification status ONLY after credentials are confirmed correct
+  if (!user.isVerified) {
+    throw new Error("Please verify your email first.");
+  }
+
   // ------------------------------
   // MFA Enabled
   // ------------------------------
-  if (user.mfaEnabled) {
-    await sendMFA(user._id);
+ if (user.mfaEnabled) {
+    const mfaToken = await sendMFA(user._id);
 
     return {
       requiresMFA: true,
-      userId: user._id,
+      mfaToken,
       email: user.email,
     };
   }
@@ -193,19 +196,18 @@ const forgotPassword = async (email) => {
   if (!user) {
     return true;
   }
-
+  // Generate a secure password reset token
   const resetToken = generateResetToken();
-
+  // Store only the hashed reset token
  user.passwordResetToken = hashToken(resetToken);
+ // Set the password reset token expiry time
   user.passwordResetExpires = new Date(
     Date.now() + 15 * 60 * 1000
   );
-
   await user.save();
-
   const resetLink =
     `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-
+// Send the password reset email
   await sendEmail({
     to: user.email,
     subject: "SecureVault Password Reset",
@@ -279,6 +281,10 @@ const enableMFA = async (userId) => {
 /* ===========================================
    SEND MFA OTP
 =========================================== */
+/* ===========================================
+   SEND MFA OTP
+   Returns a short-lived MFA session token.
+=========================================== */
 const sendMFA = async (userId) => {
   const user = await User.findById(userId);
 
@@ -286,19 +292,23 @@ const sendMFA = async (userId) => {
     throw new Error("User not found");
   }
 
-  const otp = Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
-
-  // 5 minutes, not 30 seconds - a real user can't read an email and
-  // type a code in under 30 seconds.
-  user.mfaCode = otp;
+  // CSPRNG six-digit OTP
+  const otp = crypto.randomInt(100000, 1000000).toString();
+if (process.env.NODE_ENV !== "production") {
+    console.log("=== DEV OTP:", otp, "===");
+  }
+  // Store only the hash of the OTP - never the plaintext
+  user.mfaCode = hashToken(otp);
   user.mfaExpires = new Date(Date.now() + 5 * 60 * 1000);
+  user.mfaAttempts = 0;
+
+  // Issue an unguessable MFA session token bound to this user
+  const mfaToken = crypto.randomBytes(32).toString("hex");
+  user.mfaToken = hashToken(mfaToken);
+  user.mfaTokenExpires = new Date(Date.now() + 5 * 60 * 1000);
 
   await user.save();
 
-  // Never log the OTP - anyone with log access could complete login
-  // as the victim without ever touching their inbox.
   await sendEmail({
     to: user.email,
     subject: "SecureVault - Your verification code",
@@ -309,18 +319,36 @@ const sendMFA = async (userId) => {
     `,
   });
 
-  return true;
+  return mfaToken;
+};
+
+/* ===========================================
+   RESOLVE MFA SESSION
+=========================================== */
+const getUserByMfaToken = async (mfaToken) => {
+  const user = await User.findOne({
+    mfaToken: hashToken(mfaToken),
+  });
+
+  if (
+    !user ||
+    !user.mfaTokenExpires ||
+    user.mfaTokenExpires < Date.now()
+  ) {
+    throw new Error("Invalid or expired MFA session.");
+  }
+
+  return user;
 };
 
 /* ===========================================
    VERIFY MFA OTP
 =========================================== */
-const verifyMFA = async (userId, otp) => {
-  const user = await User.findById(userId);
-
-  if (!user) {
-    throw new Error("User not found");
-  }
+/* ===========================================
+   VERIFY MFA OTP
+=========================================== */
+const verifyMFA = async (mfaToken, otp) => {
+  const user = await getUserByMfaToken(mfaToken);
 
   if (!user.mfaEnabled) {
     throw new Error("MFA is not enabled.");
@@ -334,16 +362,42 @@ const verifyMFA = async (userId, otp) => {
     throw new Error("OTP expired");
   }
 
-  if (user.mfaCode !== otp) {
+  // Constant-time comparison of the hashed OTP
+  const submitted = Buffer.from(hashToken(String(otp)), "hex");
+  const stored = Buffer.from(user.mfaCode, "hex");
+
+  const isMatch =
+    submitted.length === stored.length &&
+    crypto.timingSafeEqual(submitted, stored);
+
+  if (!isMatch) {
+    user.mfaAttempts = (user.mfaAttempts || 0) + 1;
+
+    // Per-user lockout - not bypassable by rotating IP
+    if (user.mfaAttempts >= 5) {
+      user.mfaCode = null;
+      user.mfaExpires = null;
+      user.mfaAttempts = 0;
+      user.mfaToken = null;
+      user.mfaTokenExpires = null;
+      await user.save();
+      throw new Error("Too many incorrect attempts. Please log in again.");
+    }
+
+    await user.save();
     throw new Error("Invalid OTP");
   }
 
+  // Single-use: burn the OTP and the MFA session
   user.mfaCode = null;
   user.mfaExpires = null;
+  user.mfaAttempts = 0;
+  user.mfaToken = null;
+  user.mfaTokenExpires = null;
 
   await user.save();
 
-  return true;
+  return user;
 };
 
 module.exports = {
@@ -354,5 +408,6 @@ module.exports = {
   resetPassword,
   enableMFA,
   sendMFA,
+   getUserByMfaToken,
   verifyMFA,
 };
