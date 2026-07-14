@@ -40,6 +40,11 @@ const lockUser = async (req, res) => {
 
     user.isActive = false;
 
+    // Terminate the session on lock. Without clearing the stored refresh
+    // token, a locked user could still mint a fresh access token via
+    // POST /api/auth/refresh-token and regain access (CWE-613).
+    user.refreshToken = null;
+
     await user.save();
 
     res.status(200).json({
@@ -193,9 +198,6 @@ const auditLogs = async (req, res) => {
     });
   }
 };
-/* ===========================================
-   Dashboard Statistics
-=========================================== */
 /* ===========================================
    Dashboard Statistics
 =========================================== */

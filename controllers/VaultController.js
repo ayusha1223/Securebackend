@@ -157,18 +157,33 @@ const removePassword = async (req, res) => {
 /* ===========================================
    Password Health Dashboard
 =========================================== */
+/* ===========================================
+   Password Health Dashboard
+=========================================== */
 const getPasswordHealth = async (req, res) => {
   try {
     const vaults = await Vault.find({
       user: req.user._id,
     });
 
+    // Strip server-only fields before returning anything to the client.
+    // The HMAC `passwordFingerprint` is a deterministic reuse identifier and
+    // the `password` field is raw ciphertext - neither belongs in a response.
+    // Every other vault endpoint already removes the fingerprint; this one
+    // must be consistent (CWE-200).
+    const sanitize = (vault) => {
+      const obj = vault.toObject();
+      delete obj.password;
+      delete obj.passwordFingerprint;
+      return obj;
+    };
+
     const weakPasswords = [];
     const reused = [];
     const expired = [];
     const expiringSoon = [];
 
-    const passwordMap = {};
+    const seen = {};
 
     const today = new Date();
 
@@ -177,28 +192,30 @@ const getPasswordHealth = async (req, res) => {
 
       const analysis = analyzePassword(plainPassword);
 
+      const safe = sanitize(vault);
+
       if (analysis.strength === "Weak") {
-        weakPasswords.push(vault);
+        weakPasswords.push(safe);
       }
 
-      if (passwordMap[plainPassword]) {
-        reused.push(vault);
+      if (seen[plainPassword]) {
+        reused.push(safe);
       } else {
-        passwordMap[plainPassword] = true;
+        seen[plainPassword] = true;
       }
 
       if (vault.passwordExpiry) {
         const expiry = new Date(vault.passwordExpiry);
 
         if (expiry < today) {
-          expired.push(vault);
+          expired.push(safe);
         } else {
           const days =
             (expiry - today) /
             (1000 * 60 * 60 * 24);
 
           if (days <= 7) {
-            expiringSoon.push(vault);
+            expiringSoon.push(safe);
           }
         }
       }
@@ -223,7 +240,7 @@ const getPasswordHealth = async (req, res) => {
       success: true,
       data: {
         score,
-        vaults,
+        vaults: vaults.map(sanitize),
         weakPasswords,
         reused,
         expired,
