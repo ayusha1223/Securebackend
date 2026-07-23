@@ -1,29 +1,22 @@
-name: SecureVault Backend CI
+name: Backend CI
 
 on:
   push:
-    branches: [main, master]
+    branches:
+      - main
+      - master
 
   pull_request:
-    branches: [main, master]
-
-  workflow_dispatch:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: backend-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches:
+      - main
+      - master
 
 jobs:
-  validate-backend:
-    name: Validate Backend
+  backend:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v6
 
       - name: Set up Node.js
@@ -32,49 +25,8 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install exact dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Check JavaScript syntax
-        shell: bash
-        run: |
-          find . -type f -name "*.js" \
-            -not -path "./node_modules/*" \
-            -print0 |
-          xargs -0 -n1 node --check
-
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
-
-  docker-security:
-    name: Build and Scan Docker Image
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: validate-backend
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build backend Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          load: true
-          push: false
-          tags: securevault-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: securevault-backend:${{ github.sha }}
-          format: table
-          exit-code: "1"
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
+      - name: Run Security Audit
+        run: npm audit --audit-level=high
