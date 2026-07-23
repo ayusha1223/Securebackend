@@ -1,31 +1,43 @@
-name: Backend CI
+name: SecureVault Backend CI
 
 on:
   push:
-    branches:
-      - main
-      - master
-
+    branches: [main, master]
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend:
+  validate-backend:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Install exact dependencies
+        run: npm ci
 
-      - name: Run Security Audit
-        run: npm audit --audit-level=high
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          find . -type f -name "*.js" \
+            -not -path "./node_modules/*" \
+            -print0 |
+          xargs -0 -n1 node --check
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
