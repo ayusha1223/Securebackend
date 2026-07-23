@@ -178,3 +178,4 @@ module.exports = {
   decryptLegacyCBC,
   fingerprint,
 };
+

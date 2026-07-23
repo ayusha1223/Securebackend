@@ -27,12 +27,14 @@ const sendEmail = async ({ to, subject, html }) => {
       html,
     });
 
-    console.log("Email sent:", info.response);
+    console.log("Email sent to:", to);
+    console.log("Message ID:", info.messageId);
     console.log("Accepted:", info.accepted);
     console.log("Rejected:", info.rejected);
+
+    return info;
   } catch (error) {
-    console.error("EMAIL ERROR:");
-    console.error(error);
+    console.error("EMAIL ERROR:", error);
     throw error;
   }
 };

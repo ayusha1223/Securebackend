@@ -1,7 +1,9 @@
 const rateLimit = require("express-rate-limit");
 
 const loginLimiter = rateLimit({
+  // Lock account after five failed login attempts
   windowMs: 15 * 60 * 1000,
+  // Maximum failed attempts
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
