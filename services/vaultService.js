@@ -1,9 +1,7 @@
 const Vault = require("../models/Vault");
 const { encrypt, decrypt, fingerprint } = require("../utils/encrypt");
 
-/* ============================
-   Create Password
-============================ */
+
 const createVault = async (userId, data) => {
   const fp = fingerprint(data.password);
 
@@ -38,9 +36,6 @@ const createVault = async (userId, data) => {
   });
 };
 
-/* ============================
-   Get All Passwords
-============================ */
 const getAllVaults = async (userId) => {
   const vaults = await Vault.find({
     user: userId,
@@ -79,9 +74,6 @@ const getAllVaults = async (userId) => {
   });
 };
 
-/* ============================
-   Get Single Password
-============================ */
 const getVaultById = async (userId, vaultId) => {
   const vault = await Vault.findOne({
     _id: vaultId,
@@ -101,9 +93,6 @@ const getVaultById = async (userId, vaultId) => {
   return result;
 };
 
-/* ============================
-   Update Password
-============================ */
 const updateVault = async (userId, vaultId, data) => {
   const vault = await Vault.findOne({
     _id: vaultId,
@@ -174,9 +163,7 @@ const updateVault = async (userId, vaultId, data) => {
   return result;
 };
 
-/* ============================
-   Delete Password
-============================ */
+
 const deleteVault = async (userId, vaultId) => {
   const vault = await Vault.findOne({
     _id: vaultId,
@@ -192,11 +179,7 @@ const deleteVault = async (userId, vaultId) => {
   return true;
 };
 
-/* ============================
-   Search Passwords
-   Regex metacharacters are escaped to prevent regex injection
-   and ReDoS via user-supplied search terms.
-============================ */
+
 const searchVaults = async (userId, query) => {
   const safe = String(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -210,9 +193,7 @@ const searchVaults = async (userId, query) => {
   }).select("-passwordFingerprint");
 };
 
-/* ============================
-   Get By Category
-============================ */
+
 const getVaultsByCategory = async (userId, category) => {
   return await Vault.find({
     user: userId,
@@ -220,9 +201,7 @@ const getVaultsByCategory = async (userId, category) => {
   }).select("-passwordFingerprint");
 };
 
-/* ============================
-   Get Favourites
-============================ */
+
 const getFavouriteVaults = async (userId) => {
   return await Vault.find({
     user: userId,

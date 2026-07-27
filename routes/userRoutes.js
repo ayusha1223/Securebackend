@@ -10,9 +10,6 @@ const {
   changePassword,
 } = require("../controllers/UserController");
 
-/* ===========================
-   Profile
-=========================== */
 
 router.get("/profile", protect, getProfile);
 

@@ -24,11 +24,6 @@ req.user = await User.findById(decoded.id).select("-password");
         message: "User not found",
       });
     }
-
-    // Reject deactivated accounts on every request, not just at login.
-    // A stateless JWT stays valid until it expires, so without this check
-    // an account locked by an admin would keep working until the token
-    // ran out - and could even mint new tokens via /refresh-token (CWE-613).
     if (!req.user.isActive) {
       return res.status(403).json({
         success: false,

@@ -17,9 +17,6 @@ const {
   getPasswordHealth,
 } = require("../controllers/VaultController");
 
-/* ===========================================
-   Vault CRUD
-=========================================== */
 
 // Create Password
 router.post(

@@ -62,21 +62,7 @@ const loadLegacyKey = () => {
 
 const OLD_ENCRYPTION_KEY = loadLegacyKey();
 
-/**
- * Encrypt with AES-256-GCM.
- *
- * GCM is an authenticated cipher: it produces an authentication tag that
- * is verified on decryption. AES-256-CBC (previously used here) provides
- * confidentiality but no integrity, making stored ciphertext malleable -
- * an attacker with write access to the database could flip bits in the IV
- * to predictably alter the decrypted plaintext without detection (CWE-353).
- *
- * Format: iv:authTag:ciphertext  (all hex)
- *
- * NOTE: never log the plaintext or the derived ciphertext here. Vault
- * secrets passing through this function must not reach stdout/log files
- * (sensitive data exposure in logs).
- */
+
 const encrypt = (text) => {
   const iv = crypto.randomBytes(IV_LENGTH);
 
@@ -92,9 +78,7 @@ const encrypt = (text) => {
   return [iv.toString("hex"), authTag.toString("hex"), encrypted].join(":");
 };
 
-/**
- * Decrypt and verify. Throws if the ciphertext has been tampered with.
- */
+
 const decrypt = (payload) => {
   const parts = String(payload).split(":");
 
@@ -120,13 +104,7 @@ const decrypt = (payload) => {
   return decrypted;
 };
 
-/**
- * Decrypt data written by the pre-upgrade AES-256-CBC implementation.
- * Format: iv:ciphertext (two hex parts, 16-byte IV).
- *
- * Exported ONLY for the one-time migration script
- * (scripts/migrate-cbc-to-gcm.js). Do not use in application code.
- */
+
 const decryptLegacyCBC = (payload) => {
   const parts = String(payload).split(":");
 
@@ -153,19 +131,7 @@ const decryptLegacyCBC = (payload) => {
   return decrypted;
 };
 
-/**
- * Deterministic keyed fingerprint of a secret.
- *
- * Used for password-reuse detection. Previously, detecting reuse required
- * decrypting every vault entry the user owned and comparing plaintexts in
- * memory - an O(n) decryption on every write, and a large plaintext exposure
- * surface. An HMAC fingerprint lets the same check run as a single indexed
- * database query with no decryption at all.
- *
- * Keyed (HMAC) rather than a bare hash so that an attacker who steals only
- * the database cannot brute-force the fingerprints offline without also
- * obtaining FINGERPRINT_KEY.
- */
+
 const fingerprint = (text) =>
   crypto
     .createHmac("sha256", FINGERPRINT_KEY)

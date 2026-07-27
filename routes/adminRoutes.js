@@ -24,10 +24,6 @@ router.get(
   dashboardStats
 );
 
-/* ===========================================
-   Users
-=========================================== */
-
 router.get(
   "/users",
   protect,
@@ -74,10 +70,6 @@ router.get(
   admin,
   adminDashboard
 );
-
-/* ===========================================
-   Audit Logs
-=========================================== */
 
 router.get(
   "/audit-logs",

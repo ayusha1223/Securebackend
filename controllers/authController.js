@@ -21,9 +21,6 @@ const {
   generateRefreshToken,
 } = require("../utils/generateToken");
 
-/* ===========================================
-   Register
-=========================================== */
 const register = async (req, res) => {
   try {
     const user = await registerUser(req.body);
@@ -40,9 +37,7 @@ const register = async (req, res) => {
     });
   }
 };
-/* ===========================================
-   Resend MFA OTP
-=========================================== */
+
 const resendUserMFA = async (req, res) => {
   try {
     const { mfaToken } = req.body;
@@ -63,9 +58,6 @@ const resendUserMFA = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Login
-=========================================== */
 const login = async (req, res) => {
   try {
     const {
@@ -131,9 +123,6 @@ const result = await loginUser(
   }
 };
 
-/* ===========================================
-   Verify Email
-=========================================== */
 const verifyUserEmail = async (req, res) => {
   try {
     await verifyEmail(req.params.token);
@@ -150,9 +139,6 @@ const verifyUserEmail = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Forgot Password
-=========================================== */
 const forgotUserPassword = async (req, res) => {
   try {
     await forgotPassword(req.body.email);
@@ -166,9 +152,6 @@ const forgotUserPassword = async (req, res) => {
   });
 };
 
-/* ===========================================
-   Reset Password
-=========================================== */
 const resetUserPassword = async (req, res) => {
   try {
     await resetPassword(
@@ -198,9 +181,6 @@ const resetUserPassword = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Enable MFA
-=========================================== */
 const enableUserMFA = async (req, res) => {
   try {
     await enableMFA(req.user._id);
@@ -218,9 +198,6 @@ const enableUserMFA = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Send MFA OTP
-=========================================== */
 const sendUserMFA = async (req, res) => {
   try {
     await sendMFA(req.user._id);
@@ -238,9 +215,6 @@ const sendUserMFA = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Verify MFA OTP
-=========================================== */
 const verifyUserMFA = async (req, res) => {
   try {
     const { mfaToken, otp } = req.body;
@@ -260,31 +234,33 @@ const verifyUserMFA = async (req, res) => {
       req,
     });
 
-    res
-      .cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-        maxAge: 15 * 60 * 1000,
-      })
-      .cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      })
-      .status(200)
-      .json({
-        success: true,
-        message: "Login successful.",
-        user: {
-          id: user._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: user.role,
-        },
-      });
+   res
+  .cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 15 * 60 * 1000,
+  })
+  .cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  })
+  .status(200)
+  .json({
+    success: true,
+    message: "Login successful.",
+    user: {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    },
+  });
   } catch (error) {
     res.status(400).json({
       success: false,
@@ -293,9 +269,6 @@ const verifyUserMFA = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Logout
-=========================================== */
 const logout = async (req, res) => {
   try {
     if (req.user) {

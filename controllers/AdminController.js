@@ -4,9 +4,6 @@ const Vault = require("../models/Vault");
 const AuditLog = require("../models/AuditLog");
 const SystemSettings = require("../models/SystemSettings");
 
-/* ===========================================
-   Get All Users
-=========================================== */
 const getUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -24,9 +21,6 @@ const getUsers = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Lock User
-=========================================== */
 const lockUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -59,9 +53,6 @@ const lockUser = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Unlock User
-=========================================== */
 const unlockUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -91,9 +82,6 @@ const unlockUser = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Delete User
-=========================================== */
 const deleteUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -118,9 +106,7 @@ const deleteUser = async (req, res) => {
     });
   }
 };
-/* ===========================================
-   Admin Dashboard
-=========================================== */
+
 const adminDashboard = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
@@ -179,9 +165,6 @@ const adminDashboard = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Audit Logs
-=========================================== */
 const auditLogs = async (req, res) => {
   try {
     const logs = await getAllLogs();
@@ -198,9 +181,7 @@ const auditLogs = async (req, res) => {
     });
   }
 };
-/* ===========================================
-   Dashboard Statistics
-=========================================== */
+
 const dashboardStats = async (req, res) => {
   try {
     const User = require("../models/User");
@@ -276,9 +257,7 @@ const dashboardStats = async (req, res) => {
     });
   }
 };
-/* ===========================================
-   Get System Settings
-=========================================== */
+
 const getSystemSettings = async (req, res) => {
   try {
     let settings = await SystemSettings.findOne();
@@ -300,9 +279,6 @@ const getSystemSettings = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Update System Settings
-=========================================== */
 const updateSystemSettings = async (req, res) => {
   try {
     let settings = await SystemSettings.findOne();

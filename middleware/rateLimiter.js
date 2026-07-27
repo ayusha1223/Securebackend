@@ -1,15 +1,29 @@
 const rateLimit = require("express-rate-limit");
 
 const loginLimiter = rateLimit({
-  // Lock account after five failed login attempts
   windowMs: 15 * 60 * 1000,
-  // Maximum failed attempts
   max: 5,
+
+  // Separate limit for each email account and IP address
+  keyGenerator: (req) => {
+    const email = String(req.body?.email || "unknown")
+      .trim()
+      .toLowerCase()
+      .slice(0, 254);
+
+    return `${email}:${req.ip}`;
+  },
+
+  // Successful logins must not count toward the limit
+  skipSuccessfulRequests: true,
+
   standardHeaders: true,
   legacyHeaders: false,
+
   message: {
     success: false,
-    message: "Too many login attempts. Please try again after 15 minutes.",
+    message:
+      "Too many failed login attempts. Please try again after 15 minutes.",
   },
 });
 

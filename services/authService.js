@@ -14,9 +14,6 @@ const generateVerificationToken = require("../utils/generateVerificationToken");
 const generateResetToken = require("../utils/generateResetToken");
 const { sendEmail } = require("./emailService");
 
-/* ===========================================
-   REGISTER
-=========================================== */
 const registerUser = async (userData) => {
   const { firstName, lastName, email, password } = userData;
 
@@ -70,9 +67,7 @@ const registerUser = async (userData) => {
   };
 };
 
-/* ===========================================
-   LOGIN
-=========================================== */
+
 const loginUser = async (
   email,
   password,
@@ -83,52 +78,50 @@ const loginUser = async (
   const user = await User.findOne({
     email: email.toLowerCase(),
   });
+// Fixed: same response for missing and unverified accounts
+if (!user || !user.isVerified) {
+  throw new Error("Invalid email or password");
+}
 
- if (!user) {
-    await bcrypt.compare(password, "$2b$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidin");
-    throw new Error("Invalid email or password");
-  }
+if (user.lockUntil && user.lockUntil > Date.now()) {
+  throw new Error(
+    "Account temporarily locked due to multiple failed login attempts."
+  );
+}
 
-  if (user.lockUntil && user.lockUntil > Date.now()) {
-    throw new Error(
-      "Account temporarily locked due to multiple failed login attempts."
+const isMatch = await bcrypt.compare(
+  password,
+  user.password
+);
+
+if (!isMatch) {
+  user.failedLoginAttempts =
+    (user.failedLoginAttempts || 0) + 1;
+
+  if (user.failedLoginAttempts >= 5) {
+    user.failedLoginAttempts = 0;
+    user.lockUntil = new Date(
+      Date.now() + 15 * 60 * 1000
     );
   }
 
-  const isMatch = await bcrypt.compare(
-    password,
-    user.password
-  );
-
-  if (!isMatch) {
-    user.failedLoginAttempts++;
-
-    if (user.failedLoginAttempts >= 5) {
-      user.failedLoginAttempts = 0;
-      user.lockUntil = new Date(
-        Date.now() + 15 * 60 * 1000
-      );
-    }
-
-    await user.save();
-
-    throw new Error("Invalid email or password");
-  }
-
- user.failedLoginAttempts = 0;
-  user.lockUntil = null;
-  user.lastLogin = new Date();
-
   await user.save();
+
+  throw new Error("Invalid email or password");
+}
+
+user.failedLoginAttempts = 0;
+user.lockUntil = null;
+user.lastLogin = new Date();
+
+await user.save();
 
   // Reveal verification status ONLY after credentials are confirmed correct
   if (!user.isVerified) {
     throw new Error("Please verify your email first.");
   }
 
-  // ------------------------------
-  // MFA Enabled
-  // ------------------------------
+ 
  if (user.mfaEnabled) {
     const mfaToken = await sendMFA(user._id);
 
@@ -139,9 +132,6 @@ const loginUser = async (
     };
   }
 
-  // ------------------------------
-  // Normal Login
-  // ------------------------------
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
@@ -163,9 +153,7 @@ const loginUser = async (
     },
   };
 };
-/* ===========================================
-   VERIFY EMAIL
-=========================================== */
+
 const verifyEmail = async (token) => {
   const user = await User.findOne({
     verificationToken: hashToken(token),
@@ -183,9 +171,7 @@ const verifyEmail = async (token) => {
   return true;
 };
 
-/* ===========================================
-   FORGOT PASSWORD
-=========================================== */
+
 const forgotPassword = async (email) => {
   const user = await User.findOne({
     email: email.toLowerCase(),
@@ -231,9 +217,7 @@ const forgotPassword = async (email) => {
   return true;
 };
 
-/* ===========================================
-   RESET PASSWORD
-=========================================== */
+
 const resetPassword = async (token, password) => {
   const user = await User.findOne({
     passwordResetToken: hashToken(token),
@@ -261,9 +245,7 @@ const resetPassword = async (token, password) => {
 
   return true;
 };
-/* ===========================================
-   ENABLE MFA
-=========================================== */
+
 const enableMFA = async (userId) => {
   const user = await User.findById(userId);
 
@@ -278,13 +260,6 @@ const enableMFA = async (userId) => {
   return true;
 };
 
-/* ===========================================
-   SEND MFA OTP
-=========================================== */
-/* ===========================================
-   SEND MFA OTP
-   Returns a short-lived MFA session token.
-=========================================== */
 const sendMFA = async (userId) => {
   const user = await User.findById(userId);
 
@@ -322,9 +297,6 @@ if (process.env.NODE_ENV !== "production") {
   return mfaToken;
 };
 
-/* ===========================================
-   RESOLVE MFA SESSION
-=========================================== */
 const getUserByMfaToken = async (mfaToken) => {
   const user = await User.findOne({
     mfaToken: hashToken(mfaToken),
@@ -341,12 +313,6 @@ const getUserByMfaToken = async (mfaToken) => {
   return user;
 };
 
-/* ===========================================
-   VERIFY MFA OTP
-=========================================== */
-/* ===========================================
-   VERIFY MFA OTP
-=========================================== */
 const verifyMFA = async (mfaToken, otp) => {
   const user = await getUserByMfaToken(mfaToken);
 

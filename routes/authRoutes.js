@@ -31,9 +31,7 @@ const {
   refreshToken,
 } = require("../controllers/TokenController");
 
-/* ===========================================
-   Register
-=========================================== */
+
 router.post(
   "/register",
   registerLimiter,
@@ -47,9 +45,6 @@ router.post(
   register
 );
 
-/* ===========================================
-   Login
-=========================================== */
 router.post(
   "/login",
   loginLimiter,
@@ -61,23 +56,13 @@ router.post(
   login
 );
 router.post("/logout", protect, logout);
-
-/* ===========================================
-   Refresh Token
-=========================================== */
 router.post("/refresh-token", refreshToken);
 
-/* ===========================================
-   Email Verification
-=========================================== */
 router.get(
   "/verify-email/:token",
   verifyUserEmail
 );
 
-/* ===========================================
-   Forgot Password
-=========================================== */
 router.post(
   "/forgot-password",
   forgotPasswordLimiter,
@@ -88,9 +73,6 @@ router.post(
   forgotUserPassword
 );
 
-/* ===========================================
-   Reset Password
-=========================================== */
 router.post(
   "/reset-password/:token",
   resetPasswordLimiter,
@@ -99,18 +81,13 @@ router.post(
   resetUserPassword
 );
 
-/* ===========================================
-   Enable MFA
-=========================================== */
+
 router.post(
   "/mfa/enable",
   protect,
   enableUserMFA
 );
 
-/* ===========================================
-   Send OTP
-=========================================== */
 router.post(
   "/mfa/send",
   protect,
@@ -118,9 +95,6 @@ router.post(
   sendUserMFA
 );
 
-/* ===========================================
-   Resend OTP
-=========================================== */
 router.post(
   "/mfa/resend",
   mfaResendLimiter,
@@ -134,9 +108,6 @@ router.post(
   resendUserMFA
 );
 
-/* ===========================================
-   Verify OTP
-=========================================== */
 router.post(
   "/mfa/verify",
   mfaVerifyLimiter,

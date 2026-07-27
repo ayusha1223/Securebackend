@@ -3,9 +3,6 @@ const {
   getAllLogs,
 } = require("../services/auditService");
 
-/* ===========================================
-   User Audit Logs
-=========================================== */
 const myLogs = async (req, res) => {
   try {
     const logs = await getUserLogs(req.user._id);
@@ -23,9 +20,6 @@ const myLogs = async (req, res) => {
   }
 };
 
-/* ===========================================
-   Admin Audit Logs
-=========================================== */
 const allLogs = async (req, res) => {
   try {
     const logs = await getAllLogs();

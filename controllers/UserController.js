@@ -1,20 +1,12 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 
-/* ===========================================
-   GET PROFILE
-=========================================== */
-
 const getProfile = async (req, res) => {
   res.status(200).json({
     success: true,
     user: req.user,
   });
 };
-
-/* ===========================================
-   UPDATE PROFILE
-=========================================== */
 
 const updateProfile = async (req, res) => {
   try {
@@ -66,10 +58,6 @@ const updateProfile = async (req, res) => {
     });
   }
 };
-
-/* ===========================================
-   CHANGE PASSWORD
-=========================================== */
 
 const changePassword = async (req, res) => {
   try {

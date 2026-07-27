@@ -19,10 +19,6 @@ const {
 } = require("../utils/passwordStrength");
 const { decrypt } = require("../utils/encrypt");
 
-
-/* ============================
-   Create Password
-============================ */
 const addPassword = async (req, res) => {
   try {
     const vault = await createVault(req.user._id, req.body);
@@ -58,9 +54,6 @@ const addPassword = async (req, res) => {
 }
 };
 
-/* ============================
-   Get All Passwords
-============================ */
 const getPasswords = async (req, res) => {
   try {
     const vaults = await getAllVaults(req.user._id);
@@ -78,9 +71,6 @@ const getPasswords = async (req, res) => {
   }
 };
 
-/* ============================
-   Get One Password
-============================ */
 const getPassword = async (req, res) => {
   try {
     const vault = await getVaultById(req.user._id, req.params.id);
@@ -97,9 +87,6 @@ const getPassword = async (req, res) => {
   }
 };
 
-/* ============================
-   Update Password
-============================ */
 const editPassword = async (req, res) => {
   try {
     const vault = await updateVault(
@@ -128,9 +115,7 @@ const editPassword = async (req, res) => {
     });
   }
 };
-/* ============================
-   Delete Password
-============================ */
+
 const removePassword = async (req, res) => {
   try {
     await deleteVault(req.user._id, req.params.id);
@@ -154,12 +139,7 @@ const removePassword = async (req, res) => {
     });
   }
 };
-/* ===========================================
-   Password Health Dashboard
-=========================================== */
-/* ===========================================
-   Password Health Dashboard
-=========================================== */
+
 const getPasswordHealth = async (req, res) => {
   try {
     const vaults = await Vault.find({
@@ -258,9 +238,6 @@ const getPasswordHealth = async (req, res) => {
   }
 };
 
-/* ============================
-   Search Passwords
-============================ */
 const searchPasswords = async (req, res) => {
   try {
     const vaults = await searchVaults(
@@ -281,9 +258,6 @@ const searchPasswords = async (req, res) => {
   }
 };
 
-/* ============================
-   Get Category
-============================ */
 const getCategoryPasswords = async (req, res) => {
   try {
     const vaults = await getVaultsByCategory(
@@ -304,9 +278,6 @@ const getCategoryPasswords = async (req, res) => {
   }
 };
 
-/* ============================
-   Get Favourites
-============================ */
 const getFavourites = async (req, res) => {
   try {
     const vaults = await getFavouriteVaults(req.user._id);
@@ -324,9 +295,6 @@ const getFavourites = async (req, res) => {
   }
 };
 
-/* ============================
-   Toggle Favourite
-============================ */
 const favouritePassword = async (req, res) => {
   try {
     const vault = await toggleFavourite(

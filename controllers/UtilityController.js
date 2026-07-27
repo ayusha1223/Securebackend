@@ -2,9 +2,6 @@ const { generatePassword } = require("../utils/passwordGenerator");
 const { analyzePassword } = require("../utils/passwordStrength");
 const SystemSettings = require("../models/SystemSettings");
 
-/* ===========================================
-   Generate Password
-=========================================== */
 const generateSecurePassword = (req, res) => {
   try {
     const password = generatePassword(req.body);
@@ -21,9 +18,6 @@ const generateSecurePassword = (req, res) => {
   }
 };
 
-/* ===========================================
-   Password Strength
-=========================================== */
 const checkPasswordStrength = (req, res) => {
   try {
     const { password } = req.body;
@@ -42,9 +36,6 @@ const checkPasswordStrength = (req, res) => {
   }
 };
 
-/* ===========================================
-   Get System Settings
-=========================================== */
 const getSystemSettings = async (req, res) => {
   try {
     let settings = await SystemSettings.findOne();
